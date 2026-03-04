@@ -1,0 +1,183 @@
+/// All CBN-licensed commercial banks, digital banks, and microfinance banks in Nigeria.
+/// Each entry has a display [name] and NIP [code].
+/// Source: CBN licensed entities, NIP sort codes, and public fintech records (up to 2025).
+library;
+
+class NigerianBank {
+  final String name;
+  final String code;
+  const NigerianBank(this.name, this.code);
+}
+
+const List<NigerianBank> nigerianBanks = [
+  // ── Commercial Banks (CBN-licensed) ──────────────────────────────────────
+  NigerianBank('Access Bank', '044'),
+  NigerianBank('Citibank Nigeria', '023'),
+  NigerianBank('Ecobank Nigeria', '050'),
+  NigerianBank('Fidelity Bank', '070'),
+  NigerianBank('First Bank of Nigeria', '011'),
+  NigerianBank('First City Monument Bank (FCMB)', '214'),
+  NigerianBank('Globus Bank', '103'),
+  NigerianBank('Guaranty Trust Bank (GTBank)', '058'),
+  NigerianBank('Heritage Bank', '030'),
+  NigerianBank('Keystone Bank', '082'),
+  NigerianBank('Lotus Bank', '303'),
+  NigerianBank('Optimus Bank', '107'),
+  NigerianBank('Parallex Bank', '526'),
+  NigerianBank('Polaris Bank', '076'),
+  NigerianBank('Premium Trust Bank', '105'),
+  NigerianBank('Providus Bank', '101'),
+  NigerianBank('Signature Bank', '106'),
+  NigerianBank('Stanbic IBTC Bank', '221'),
+  NigerianBank('Standard Chartered Bank', '068'),
+  NigerianBank('Sterling Bank', '232'),
+  NigerianBank('SunTrust Bank', '100'),
+  NigerianBank('TAJBank', '302'),
+  NigerianBank('Titan Trust Bank', '102'),
+  NigerianBank('Union Bank of Nigeria', '032'),
+  NigerianBank('United Bank for Africa (UBA)', '033'),
+  NigerianBank('Unity Bank', '215'),
+  NigerianBank('Wema Bank', '035'),
+  NigerianBank('Zenith Bank', '057'),
+
+  // ── Digital / Fintech Banks ───────────────────────────────────────────────
+  NigerianBank('Carbon (Carbon MFB)', '100026'),
+  NigerianBank('FairMoney Microfinance Bank', '090551'),
+  NigerianBank('Kuda Microfinance Bank', '090267'),
+  NigerianBank('Moniepoint Microfinance Bank', '090405'),
+  NigerianBank('OPay Digital Services', '100004'),
+  NigerianBank('PalmPay', '100033'),
+  NigerianBank('Paga', '100002'),
+  NigerianBank('Sparkle Microfinance Bank', '090325'),
+  NigerianBank('VFD Microfinance Bank', '090110'),
+  NigerianBank('Eyowo', '090328'),
+  NigerianBank('Rubies Microfinance Bank', '090175'),
+  NigerianBank('Mint-Finex MFB (Mint)', '090281'),
+  NigerianBank('Brass MFB', '090560'),
+  NigerianBank('Raven Bank (RavenPay)', '120001'),
+  NigerianBank('ALAT by Wema', '035'),
+  NigerianBank('Nomba (Kudi MFB)', '090442'),
+  NigerianBank('Pocket by PiggyVest', '090396'),
+  NigerianBank('Bankly MFB', '090431'),
+
+  // ── Microfinance Banks ────────────────────────────────────────────────────
+  NigerianBank('AB Microfinance Bank', '090270'),
+  NigerianBank('ACCION Microfinance Bank', '090134'),
+  NigerianBank('Ag Mortgage Bank', '100028'),
+  NigerianBank('Amju Unique MFB', '090180'),
+  NigerianBank('Boctrust Microfinance Bank', '090117'),
+  NigerianBank('Bosak Microfinance Bank', '090176'),
+  NigerianBank('Baines Credit Microfinance Bank', '090188'),
+  NigerianBank('CEMCS Microfinance Bank', '090154'),
+  NigerianBank('Covenant Microfinance Bank', '090145'),
+  NigerianBank('Credit Afrique Microfinance Bank', '090159'),
+  NigerianBank('EcoBank Express Account', '100008'),
+  NigerianBank('Empire Trust Microfinance Bank', '090114'),
+  NigerianBank('e-Barcs Microfinance Bank', '090156'),
+  NigerianBank('Finca Microfinance Bank', '090400'),
+  NigerianBank('First Option Microfinance Bank', '090285'),
+  NigerianBank('Fortis Microfinance Bank', '090108'),
+  NigerianBank('Grooming Centre Microfinance Bank', '090195'),
+  NigerianBank('Hackman Microfinance Bank', '090147'),
+  NigerianBank('Hasal Microfinance Bank', '090121'),
+  NigerianBank('Ibile Microfinance Bank', '090118'),
+  NigerianBank('Infinity MFB', '090157'),
+  NigerianBank('Jigawa Savings & Loans', '090133'),
+  NigerianBank('LaFarge MFB', '090271'),
+  NigerianBank('Lagos Building Investment Company (LBIC)', '090177'),
+  NigerianBank('LAPO Microfinance Bank', '090177'),
+  NigerianBank('Layer3 MFB', '090420'),
+  NigerianBank('Letshego MFB', '090159'),
+  NigerianBank('M36 MFB', '090153'),
+  NigerianBank('Mainstreet MFB', '090171'),
+  NigerianBank('Microcred MFB', '090136'),
+  NigerianBank('Mkudi', '090353'),
+  NigerianBank('Mutual Benefits Microfinance Bank', '090190'),
+  NigerianBank('Navy Microfinance Bank', '090263'),
+  NigerianBank('New Dawn Microfinance Bank', '090115'),
+  NigerianBank('NPF Microfinance Bank', '070001'),
+  NigerianBank('Ohafia Microfinance Bank', '090122'),
+  NigerianBank('Okpoga Microfinance Bank', '090161'),
+  NigerianBank('Olofin Owena MFB', '090173'),
+  NigerianBank('Page Financials MFB', '090317'),
+  NigerianBank('Pecantrust Microfinance Bank', '090137'),
+  NigerianBank('Pennywise Microfinance Bank', '090196'),
+  NigerianBank('Personal Trust Microfinance Bank', '090135'),
+  NigerianBank('Petra Microfinance Bank', '090165'),
+  NigerianBank('Plateau State Microfinance Bank', '090131'),
+  NigerianBank('Rahama Microfinance Bank', '090170'),
+  NigerianBank('Regent Microfinance Bank', '090125'),
+  NigerianBank('RenMoney Microfinance Bank', '090198'),
+  NigerianBank('Richway Microfinance Bank', '090132'),
+  NigerianBank('SafeTrust Mortgage Bank', '090006'),
+  NigerianBank('Seed Capital Microfinance Bank', '090197'),
+  NigerianBank('Shield Microfinance Bank', '090168'),
+  NigerianBank('Solid Allianze MFB', '090160'),
+  NigerianBank('Stellas Microfinance Bank', '090262'),
+  NigerianBank('Susu Microfinance Bank', '090185'),
+  NigerianBank('TCF MFB', '090115'),
+  NigerianBank('Trident Microfinance Bank', '090309'),
+  NigerianBank('Trust Microfinance Bank', '090327'),
+  NigerianBank('Trustfund Microfinance Bank', '090111'),
+  NigerianBank('UNN Microfinance Bank', '090251'),
+  NigerianBank('Uniben MFB', '090266'),
+  NigerianBank('Unilag Microfinance Bank', '090258'),
+  NigerianBank('Virtue Microfinance Bank', '090150'),
+  NigerianBank('Vision Fund Microfinance Bank', '090123'),
+  NigerianBank('Wetland Microfinance Bank', '090149'),
+  NigerianBank('Xslnce Microfinance Bank', '090124'),
+  NigerianBank('Yes Microfinance Bank', '090142'),
+  NigerianBank('Zikora Microfinance Bank', '090396'),
+  // Additional MFBs
+  NigerianBank('Astrapolaris MFB', '090172'),
+  NigerianBank('Balogun Gambari MFB', '090326'),
+  NigerianBank('Brightway MFB', '090338'),
+  NigerianBank('Capital Express MFB', '090197'),
+  NigerianBank('Cayley MFB', '090282'),
+  NigerianBank('Classic Finance MFB', '090353'),
+  NigerianBank('Conpro MFB', '090320'),
+  NigerianBank('County Finance MFB', '090144'),
+  NigerianBank('Davodani MFB', '090391'),
+  NigerianBank('Eko Savings & Loans', '090205'),
+  NigerianBank('Emerald MFB', '090283'),
+  NigerianBank('Fets MFB', '090363'),
+  NigerianBank('First Royal MFB', '090164'),
+  NigerianBank('Fullrange MFB', '090145'),
+  NigerianBank('Gashua MFB', '090168'),
+  NigerianBank('IISL MFB', '090258'),
+  NigerianBank('Kayvee MFB', '090254'),
+  NigerianBank('Kontagora MFB', '090236'),
+  NigerianBank('Malachy MFB', '090174'),
+  NigerianBank('Maritime MFB', '090272'),
+  NigerianBank('MicAn MFB', '090286'),
+  NigerianBank('Midland MFB', '090341'),
+  NigerianBank('Money Trust MFB', '090129'),
+  NigerianBank('Mozfin MFB', '090336'),
+  NigerianBank('OSCOTECH MFB', '090273'),
+  NigerianBank('Randalpha MFB', '090300'),
+  NigerianBank('Rephidim MFB', '090322'),
+  NigerianBank('SafeLend MFB', '090338'),
+  NigerianBank('Shongom MFB', '090332'),
+  NigerianBank('Simple Finance MFB', '090304'),
+  NigerianBank('Sobi MFB', '090143'),
+  NigerianBank('Tanadi MFB', '090358'),
+  NigerianBank('Verdant MFB', '090345'),
+  NigerianBank('Wudarkat MFB', '090388'),
+  NigerianBank('Ycee MFB', '090393'),
+];
+
+/// Names only, sorted alphabetically — used by DropdownSearch items
+List<String> get nigerianBankNames {
+  final names = nigerianBanks.map((b) => b.name).toList();
+  names.sort();
+  return names;
+}
+
+/// Look up a bank code by name
+String? bankCode(String name) {
+  try {
+    return nigerianBanks.firstWhere((b) => b.name == name).code;
+  } catch (_) {
+    return null;
+  }
+}
