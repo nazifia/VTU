@@ -32,6 +32,14 @@ class UserSerializer(serializers.ModelSerializer):
             return '0.00'
 
 
+def normalize_phone(value):
+    """Normalize phone numbers: strip spaces, and prepend 0 if it's 10 digits (e.g. 801...)."""
+    value = str(value).strip().replace(' ', '')
+    if len(value) == 10 and not value.startswith('0'):
+        value = '0' + value
+    return value
+
+
 class RegisterSerializer(serializers.Serializer):
     phone = serializers.CharField(max_length=15)
     pin = serializers.CharField(min_length=4, write_only=True)
@@ -40,8 +48,7 @@ class RegisterSerializer(serializers.Serializer):
     email = serializers.EmailField(required=False, allow_blank=True)
 
     def validate_phone(self, value):
-        # Normalise: strip spaces, ensure starts with 0 or +234
-        value = value.strip().replace(' ', '')
+        value = normalize_phone(value)
         if User.objects.filter(phone=value).exists():
             raise serializers.ValidationError('Phone number already registered.')
         return value
@@ -51,14 +58,23 @@ class LoginSerializer(serializers.Serializer):
     phone = serializers.CharField(max_length=15)
     pin = serializers.CharField(write_only=True)
 
+    def validate_phone(self, value):
+        return normalize_phone(value)
+
 
 class OTPRequestSerializer(serializers.Serializer):
     phone = serializers.CharField(max_length=15)
+
+    def validate_phone(self, value):
+        return normalize_phone(value)
 
 
 class OTPVerifySerializer(serializers.Serializer):
     phone = serializers.CharField(max_length=15)
     otp = serializers.CharField(min_length=6, max_length=6)
+
+    def validate_phone(self, value):
+        return normalize_phone(value)
 
 
 class UpdateProfileSerializer(serializers.ModelSerializer):

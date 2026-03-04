@@ -46,21 +46,21 @@ class WalletAdmin(admin.ModelAdmin):
     def balance_display(self, obj):
         color = '#10B981' if obj.balance > 0 else '#6B7280'
         return format_html(
-            '<strong style="color:{}; font-size:14px;">₦{:,.2f}</strong>',
-            color, obj.balance,
+            '<strong style="color:{}; font-size:14px;">₦{}</strong>',
+            color, f"{obj.balance:,.2f}",
         )
 
     @admin.display(description='Total Credits')
     def credit_total_display(self, obj):
         total = obj.user.transactions.filter(type='credit').aggregate(
             s=Sum('amount'))['s'] or Decimal('0')
-        return format_html('<span style="color:#10B981;">+₦{:,.2f}</span>', total)
+        return format_html('<span style="color:#10B981;">+₦{}</span>', f"{total:,.2f}")
 
     @admin.display(description='Total Debits')
     def debit_total_display(self, obj):
         total = obj.user.transactions.filter(type='debit').aggregate(
             s=Sum('amount'))['s'] or Decimal('0')
-        return format_html('<span style="color:#EF4444;">-₦{:,.2f}</span>', total)
+        return format_html('<span style="color:#EF4444;">-₦{}</span>', f"{total:,.2f}")
 
     @admin.display(description='Transactions')
     def view_transactions_link(self, obj):
@@ -90,10 +90,10 @@ class WalletAdmin(admin.ModelAdmin):
             '  <td>{}</td></tr>'
             '<tr style="border-bottom:1px solid #e5e7eb;">'
             '  <td><b>Credit Transactions</b></td>'
-            '  <td style="color:#10B981;">{} (₦{:,.2f})</td></tr>'
+            '  <td style="color:#10B981;">{} (₦{})</td></tr>'
             '<tr style="border-bottom:1px solid #e5e7eb;">'
             '  <td><b>Debit Transactions</b></td>'
-            '  <td style="color:#EF4444;">{} (₦{:,.2f})</td></tr>'
+            '  <td style="color:#EF4444;">{} (₦{})</td></tr>'
             '<tr style="border-bottom:1px solid #e5e7eb;">'
             '  <td><b>Successful</b></td>'
             '  <td style="color:#10B981;">{}</td></tr>'
@@ -104,8 +104,8 @@ class WalletAdmin(admin.ModelAdmin):
             '  <td style="color:#F59E0B;">{}</td></tr>'
             '</table>',
             agg['total'] or 0,
-            agg['credits'] or 0, agg['credit_sum'] or 0,
-            agg['debits'] or 0, agg['debit_sum'] or 0,
+            agg['credits'] or 0, f"{agg['credit_sum'] or 0:,.2f}",
+            agg['debits'] or 0, f"{agg['debit_sum'] or 0:,.2f}",
             agg['success'] or 0,
             agg['failed'] or 0,
             agg['pending'] or 0,

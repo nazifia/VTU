@@ -1,6 +1,8 @@
 from django.db import models
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 from django.utils import timezone
+from django.db.models.signals import post_save
+from django.dispatch import receiver
 import uuid
 
 
@@ -13,9 +15,6 @@ class UserManager(BaseUserManager):
         user = self.model(phone=phone, **extra_fields)
         user.set_password(pin)
         user.save(using=self._db)
-        # Auto-create linked wallet
-        from wallet.models import Wallet
-        Wallet.objects.get_or_create(user=user)
         return user
 
     def create_superuser(self, phone, pin=None, password=None, **extra_fields):
@@ -55,6 +54,14 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     def __str__(self):
         return self.phone
+
+
+@receiver(post_save, sender=User)
+def create_user_wallet(sender, instance, created, **kwargs):
+    """Automatically attach a wallet to every new User, regardless of how they are created."""
+    if created:
+        from wallet.models import Wallet
+        Wallet.objects.get_or_create(user=instance)
 
 
 class OTP(models.Model):

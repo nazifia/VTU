@@ -88,8 +88,8 @@ class UserAdmin(BaseUserAdmin):
             bal = obj.wallet.balance
             color = '#10B981' if bal > 0 else '#6B7280'
             return format_html(
-                '<span style="color:{}; font-weight:700;">₦{:,.2f}</span>',
-                color, bal,
+                '<span style="color:{}; font-weight:700;">₦{}</span>',
+                color, f"{bal:,.2f}",
             )
         except Exception:
             return format_html('<span style="color:#EF4444;">No wallet</span>')
@@ -115,14 +115,14 @@ class UserAdmin(BaseUserAdmin):
         return format_html(
             '<table style="font-size:13px; line-height:1.8;">'
             '<tr><td><b>Total Transactions</b></td><td>{}</td></tr>'
-            '<tr><td><b>Total Credits</b></td><td style="color:#10B981;">₦{:,.2f}</td></tr>'
-            '<tr><td><b>Total Debits</b></td><td style="color:#EF4444;">₦{:,.2f}</td></tr>'
+            '<tr><td><b>Total Credits</b></td><td style="color:#10B981;">₦{}</td></tr>'
+            '<tr><td><b>Total Debits</b></td><td style="color:#EF4444;">₦{}</td></tr>'
             '<tr><td><b>Successful</b></td><td>{}</td></tr>'
             '<tr><td><b>Failed</b></td><td>{}</td></tr>'
             '</table>',
             agg['total'] or 0,
-            agg['credit_sum'] or 0,
-            agg['debit_sum'] or 0,
+            f"{agg['credit_sum'] or 0:,.2f}",
+            f"{agg['debit_sum'] or 0:,.2f}",
             agg['success'] or 0,
             agg['failed'] or 0,
         )
