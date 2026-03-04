@@ -84,7 +84,7 @@ class AuthProvider with ChangeNotifier {
 
   Future<bool> loginWithBiometric() async {
     final authenticated = await _biometric.authenticate(
-      reason: 'Authenticate to access your VTU wallet',
+      reason: 'Authenticate to access Npay',
     );
     if (!authenticated) return false;
     // Load existing session if token is still valid

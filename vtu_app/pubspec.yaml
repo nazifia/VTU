@@ -1,5 +1,5 @@
-name: vtu_app
-description: "A Nigerian fintech mobile wallet application"
+name: npay
+description: "A Nigerian fintech mobile wallet application - Npay"
 publish_to: 'none'
 version: 1.0.0+1
 

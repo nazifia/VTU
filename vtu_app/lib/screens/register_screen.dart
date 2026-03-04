@@ -144,7 +144,7 @@ class _RegisterScreenState extends State<RegisterScreen>
                       Padding(
                         padding: const EdgeInsets.only(left: 12),
                         child: Text(
-                          'Join thousands using VTU Wallet',
+                          'Join thousands using Npay',
                           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                                 color: Theme.of(context)
                                     .colorScheme

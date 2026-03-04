@@ -160,7 +160,7 @@ class _LoginScreenState extends State<LoginScreen>
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        'Sign in to your VTU wallet',
+                        'Sign in to Npay',
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                               color: Theme.of(context)
                                   .colorScheme

@@ -41,20 +41,20 @@ void main() async {
         ChangeNotifierProvider.value(value: authProvider),
         ChangeNotifierProvider.value(value: configProvider),
       ],
-      child: const VtuApp(),
+      child: const NpayApp(),
     ),
   );
 }
 
-class VtuApp extends StatelessWidget {
-  const VtuApp({super.key});
+class NpayApp extends StatelessWidget {
+  const NpayApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     final theme = context.watch<ThemeProvider>();
 
     return MaterialApp(
-      title: 'VTU Wallet',
+      title: 'Npay',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
@@ -144,7 +144,7 @@ class _SplashScreen extends StatelessWidget {
               ),
               const SizedBox(height: 24),
               Text(
-                'VTU Wallet',
+                'Npay',
                 style: Theme.of(context).textTheme.displayMedium?.copyWith(
                       color: AppTheme.primaryIndigo,
                       fontWeight: FontWeight.w800,

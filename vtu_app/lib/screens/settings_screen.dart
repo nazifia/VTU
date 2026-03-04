@@ -111,9 +111,9 @@ class SettingsScreen extends StatelessWidget {
                             'App version 1.0.0',
                             () => showAboutDialog(
                               context: context,
-                              applicationName: 'VTU App',
+                              applicationName: 'Npay',
                               applicationVersion: '1.0.0',
-                              applicationLegalese: '© 2025 VTU App',
+                              applicationLegalese: '© 2025 Npay',
                             ),
                           ),
                         ],

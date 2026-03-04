@@ -5,7 +5,7 @@
     <uses-permission android:name="android.permission.USE_FINGERPRINT"/>
     <uses-permission android:name="android.permission.READ_CONTACTS"/>
     <application
-        android:label="vtu_app"
+        android:label="Npay"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity
