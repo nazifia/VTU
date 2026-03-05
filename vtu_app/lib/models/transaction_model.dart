@@ -20,6 +20,7 @@ class TransactionModel {
   final bool isCredit;
   final String? source;
   final String? destination;
+  final String? accountName;
 
   TransactionModel({
     required this.id,
@@ -34,6 +35,7 @@ class TransactionModel {
     this.isCredit = false,
     this.source,
     this.destination,
+    this.accountName,
   });
 
   String get formattedAmount {
@@ -121,6 +123,7 @@ class TransactionModel {
       reference: json['reference'],
       source: json['source'] ?? json['metadata']?['source'],
       destination: json['destination'] ?? json['metadata']?['destination'],
+      accountName: json['account_name'] ?? json['metadata']?['account_name'],
     );
   }
 
@@ -138,6 +141,7 @@ class TransactionModel {
       'reference': reference,
       'source': source,
       'destination': destination,
+      'account_name': accountName,
     };
   }
 }

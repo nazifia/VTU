@@ -7,13 +7,14 @@ class TransactionSerializer(serializers.ModelSerializer):
     provider = serializers.SerializerMethodField()
     source = serializers.SerializerMethodField()
     destination = serializers.SerializerMethodField()
+    account_name = serializers.SerializerMethodField()
 
     class Meta:
         model = Transaction
         fields = [
             'id', 'type', 'category', 'amount', 'reference',
             'status', 'description', 'metadata', 'created_at',
-            'recipient', 'provider', 'source', 'destination'
+            'recipient', 'provider', 'source', 'destination', 'account_name'
         ]
         read_only_fields = fields
 
@@ -28,3 +29,6 @@ class TransactionSerializer(serializers.ModelSerializer):
 
     def get_destination(self, obj):
         return obj.metadata.get('destination')
+
+    def get_account_name(self, obj):
+        return obj.metadata.get('account_name')

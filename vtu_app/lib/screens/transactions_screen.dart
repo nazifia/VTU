@@ -65,6 +65,7 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
             _detailRow(ctx, 'Amount', t.formattedAmount),
             _detailRow(ctx, 'Description', t.description),
             if (t.source != null) _detailRow(ctx, 'Source', t.source!),
+            if (t.accountName != null) _detailRow(ctx, 'Account Name', t.accountName!),
             if (t.destination != null) _detailRow(ctx, 'Destination', t.destination!),
             if (t.recipient != null) _detailRow(ctx, 'Recipient', t.recipient!),
             if (t.provider != null) _detailRow(ctx, 'Provider', t.provider!),
