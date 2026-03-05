@@ -7,6 +7,7 @@ import '../widgets/gradient_button.dart';
 import '../widgets/custom_text_field.dart';
 import '../widgets/glass_card.dart';
 import '../config/theme.dart';
+import '../utils/currency_formatter.dart';
 
 class BillsScreen extends StatefulWidget {
   const BillsScreen({super.key});
@@ -152,7 +153,7 @@ class _ElectricityTabState extends State<_ElectricityTab> {
         color: const Color(0xFFF59E0B),
         title: 'Payment Successful!',
         subtitle:
-            '₦${_amountCtrl.text} electricity credit sent to meter ${_meterCtrl.text}',
+            '${(double.tryParse(_amountCtrl.text) ?? 0).formatCurrency} electricity credit sent to meter ${_meterCtrl.text}',
         onDone: () {
           Navigator.pop(context);
           Navigator.pop(context);
@@ -289,7 +290,7 @@ class _ElectricityTabState extends State<_ElectricityTab> {
                     validator: (v) {
                       if (v!.isEmpty) return 'Enter amount';
                       if (double.tryParse(v) == null) return 'Invalid amount';
-                      if (double.parse(v) < 100) return 'Minimum is ₦100';
+                      if (double.parse(v) < 100) return 'Minimum is ${(100).formatCurrency}';
                       return null;
                     },
                   ),
@@ -426,7 +427,7 @@ class _CableTvTabState extends State<_CableTvTab> {
         color: AppTheme.primaryIndigo,
         title: 'Subscription Successful!',
         subtitle:
-            '$_selectedProvider ${plan['name']} (₦${plan['price']}) renewed for ${_smartcardCtrl.text}',
+            '$_selectedProvider ${plan['name']} (${(plan['price'] as num).formatCurrency}) renewed for ${_smartcardCtrl.text}',
         onDone: () {
           Navigator.pop(context);
           Navigator.pop(context);
@@ -593,7 +594,7 @@ class _CableTvTabState extends State<_CableTvTab> {
                           return ListTile(
                             title: Text(name),
                             trailing: Text(
-                              '₦${plan['price']}',
+                              (plan['price'] as num).formatCurrency,
                               style: const TextStyle(
                                 fontWeight: FontWeight.w700,
                                 color: AppTheme.primaryIndigo,
@@ -679,7 +680,7 @@ class _WaterTabState extends State<_WaterTab> {
             color: const Color(0xFF0EA5E9),
             title: 'Payment Successful!',
             subtitle:
-                '₦${_amountCtrl.text} water bill paid for account ${_accountCtrl.text}',
+                '${(double.tryParse(_amountCtrl.text) ?? 0).formatCurrency} water bill paid for account ${_accountCtrl.text}',
             onDone: () {
               Navigator.pop(context);
               Navigator.pop(context);
@@ -778,7 +779,7 @@ class _WaterTabState extends State<_WaterTab> {
                     validator: (v) {
                       if (v!.isEmpty) return 'Enter amount';
                       if (double.tryParse(v) == null) return 'Invalid amount';
-                      if (double.parse(v) < 100) return 'Minimum is ₦100';
+                      if (double.parse(v) < 100) return 'Minimum is ${(100).formatCurrency}';
                       return null;
                     },
                   ),

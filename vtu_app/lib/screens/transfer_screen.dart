@@ -8,6 +8,7 @@ import '../widgets/glass_card.dart';
 import '../widgets/contact_picker.dart';
 import '../config/theme.dart';
 import '../config/banks.dart';
+import '../utils/currency_formatter.dart';
 
 class TransferScreen extends StatefulWidget {
   const TransferScreen({super.key});
@@ -82,7 +83,7 @@ class _TransferScreenState extends State<TransferScreen> {
       return;
     }
     if (_amount < 100) {
-      _snack('Minimum transfer is ₦100');
+      _snack('Minimum transfer is ${(100).formatCurrency}');
       return;
     }
 
@@ -146,7 +147,7 @@ class _TransferScreenState extends State<TransferScreen> {
                 const Divider(height: 24),
                 _confirmRow(
                   'Amount',
-                  '₦${_amount.toStringAsFixed(0)}',
+                  _amount.formatCurrency,
                   highlight: true,
                 ),
                 const SizedBox(height: 24),
@@ -208,7 +209,7 @@ class _TransferScreenState extends State<TransferScreen> {
             ),
             const SizedBox(height: 20),
             Text(
-              '₦${_amount.toStringAsFixed(0)} Sent!',
+              '${_amount.formatCurrency} Sent!',
               style: Theme.of(context)
                   .textTheme
                   .headlineMedium
@@ -373,7 +374,7 @@ class _TransferScreenState extends State<TransferScreen> {
                                         ),
                                       ),
                                       child: Text(
-                                        '₦${amt.toInt()}',
+                                        amt.formatCurrency,
                                         style: TextStyle(
                                           fontWeight: FontWeight.w700,
                                           fontSize: 13,
@@ -401,7 +402,7 @@ class _TransferScreenState extends State<TransferScreen> {
                                 },
                                 validator: (_) {
                                   if (_amount < 100) {
-                                    return 'Minimum transfer is ₦100';
+                                    return 'Minimum transfer is ${(100).formatCurrency}';
                                   }
                                   return null;
                                 },
@@ -671,7 +672,7 @@ class _TransferScreenState extends State<TransferScreen> {
                                       _summaryRow(
                                         context,
                                         'Amount',
-                                        '₦${_amount.toStringAsFixed(0)}',
+                                        _amount.formatCurrency,
                                         highlight: true,
                                       ),
                                     ],
@@ -685,7 +686,7 @@ class _TransferScreenState extends State<TransferScreen> {
                         GradientButton(
                           label: _verifiedName == null
                               ? 'Verify Account First'
-                              : 'Send  ₦${_amount >= 100 ? _amount.toStringAsFixed(0) : '—'}',
+                              : 'Send  ${_amount >= 100 ? _amount.formatCurrency : '—'}',
                           onPressed: _verifiedName == null ? null : _submitTransfer,
                           isLoading: _loading,
                           icon: Icons.send_rounded,

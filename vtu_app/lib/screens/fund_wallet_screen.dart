@@ -8,6 +8,7 @@ import '../config/banks.dart';
 import '../providers/auth_provider.dart';
 import '../widgets/gradient_button.dart';
 import '../widgets/glass_card.dart';
+import '../utils/currency_formatter.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Shared helpers
@@ -58,7 +59,7 @@ class _AmountPicker extends StatelessWidget {
                   ),
                 ),
                 child: Text(
-                  '₦${amt.toInt()}',
+                  amt.formatCurrency,
                   style: TextStyle(
                     fontWeight: FontWeight.w700,
                     fontSize: 13,
@@ -177,7 +178,7 @@ class _FundWalletScreenState extends State<FundWalletScreen>
             ),
             const SizedBox(height: 20),
             Text(
-              '₦${amount.toStringAsFixed(0)} Added!',
+              '${amount.formatCurrency} Added!',
               style: Theme.of(ctx)
                   .textTheme
                   .headlineMedium
@@ -306,7 +307,7 @@ class _CardTabState extends State<_CardTab> {
 
   Future<void> _pay() async {
     if (_amount < 100) {
-      _snack('Minimum amount is ₦100');
+      _snack('Minimum amount is ${(100).formatCurrency}');
       return;
     }
     if (_cardNum.text.replaceAll(' ', '').length < 16) {
@@ -631,7 +632,7 @@ class _CardTabState extends State<_CardTab> {
                   const Divider(height: 16),
                   _SummaryRow(
                     label: 'Amount',
-                    value: '₦${_amount.toStringAsFixed(0)}',
+                    value: _amount.formatCurrency,
                     highlight: true,
                   ),
                 ],
@@ -655,7 +656,7 @@ class _CardTabState extends State<_CardTab> {
           const SizedBox(height: 12),
           GradientButton(
             label: _amount >= 100
-                ? 'Pay  ₦${_amount.toStringAsFixed(0)}'
+                ? 'Pay  ${_amount.formatCurrency}'
                 : 'Enter an amount to continue',
             isLoading: _loading,
             onPressed: _amount >= 100 ? _pay : null,
@@ -775,7 +776,7 @@ class _BankTransferTabState extends State<_BankTransferTab> {
       return;
     }
     if (_amount < 100) {
-      _snack('Minimum amount is ₦100');
+      _snack('Minimum amount is ${(100).formatCurrency}');
       return;
     }
     setState(() => _paying = true);
@@ -1003,7 +1004,7 @@ class _BankTransferTabState extends State<_BankTransferTab> {
                     const Divider(height: 20),
                     _SummaryRow(
                         label: 'Amount',
-                        value: '₦${_amount.toStringAsFixed(0)}',
+                        value: _amount.formatCurrency,
                         highlight: true),
                   ],
                 ),
@@ -1014,7 +1015,7 @@ class _BankTransferTabState extends State<_BankTransferTab> {
             GradientButton(
               label: _verifiedName == null
                   ? 'Verify Account First'
-                  : 'Fund Wallet  ₦${_amount >= 100 ? _amount.toStringAsFixed(0) : '—'}',
+                  : 'Fund Wallet  ${_amount >= 100 ? _amount.formatCurrency : '—'}',
               isLoading: _paying,
               onPressed: _verifiedName == null ? null : _pay,
               icon: Icons.bolt_rounded,
@@ -1178,7 +1179,7 @@ class _USSDTabState extends State<_USSDTab> {
             ),
             const SizedBox(height: 24),
             GradientButton(
-              label: "I've Done It — Add ₦${amount.toInt()} to Wallet",
+              label: "I've Done It — Add ${amount.formatCurrency} to Wallet",
               icon: Icons.check_circle_rounded,
               onPressed: () => Navigator.pop(ctx, true),
             ),
@@ -1274,7 +1275,7 @@ class _USSDTabState extends State<_USSDTab> {
               const SizedBox(height: 6),
               Text(
                 hasAmount
-                    ? '${filtered.length} bank${filtered.length == 1 ? '' : 's'} — tap 📞 to dial ₦${_amount.toInt()}'
+                    ? '${filtered.length} bank${filtered.length == 1 ? '' : 's'} — tap 📞 to dial ${_amount.formatCurrency}'
                     : 'Enter an amount above, then tap 📞 to dial',
                 style: Theme.of(context)
                     .textTheme
@@ -1466,7 +1467,7 @@ class _VirtualAccountTabState extends State<_VirtualAccountTab> {
                     ?.copyWith(fontWeight: FontWeight.w800)),
             const SizedBox(height: 8),
             Text(
-              'Have you sent exactly ₦${_amount.toInt()} to one of the virtual accounts above?',
+              'Have you sent exactly ${_amount.formatCurrency} to one of the virtual accounts above?',
               style: Theme.of(ctx)
                   .textTheme
                   .bodyMedium
@@ -1475,7 +1476,7 @@ class _VirtualAccountTabState extends State<_VirtualAccountTab> {
             ),
             const SizedBox(height: 24),
             GradientButton(
-              label: "Yes, I've Sent ₦${_amount.toInt()}",
+              label: "Yes, I've Sent ${_amount.formatCurrency}",
               icon: Icons.check_rounded,
               onPressed: () => Navigator.pop(ctx, true),
             ),
@@ -1576,7 +1577,7 @@ class _VirtualAccountTabState extends State<_VirtualAccountTab> {
                 Expanded(
                   child: Text(
                     hasAmount
-                        ? 'Transfer exactly ₦${_amount.toInt()} to any account below. Then tap "I\'ve Transferred".'
+                        ? 'Transfer exactly ${_amount.formatCurrency} to any account below. Then tap "I\'ve Transferred".'
                         : 'Enter an amount above, then transfer to any account below.',
                     style: Theme.of(context)
                         .textTheme
@@ -1692,7 +1693,7 @@ class _VirtualAccountTabState extends State<_VirtualAccountTab> {
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Text(
-                            'Send exactly  ₦${_amount.toInt()}',
+                            'Send exactly  ${_amount.formatCurrency}',
                             style: const TextStyle(
                                 color: Colors.white,
                                 fontWeight: FontWeight.w800,
@@ -1729,7 +1730,7 @@ class _VirtualAccountTabState extends State<_VirtualAccountTab> {
           const SizedBox(height: 8),
           GradientButton(
             label: hasAmount
-                ? "I've Transferred  ₦${_amount.toInt()}"
+                ? "I've Transferred  ${_amount.formatCurrency}"
                 : 'Enter an amount to continue',
             isLoading: _loading,
             onPressed: hasAmount ? _confirmTransfer : null,

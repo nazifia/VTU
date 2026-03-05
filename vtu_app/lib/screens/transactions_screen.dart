@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../models/transaction_model.dart';
@@ -63,10 +64,12 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
             _detailRow(ctx, 'Type', t.typeLabel),
             _detailRow(ctx, 'Amount', t.formattedAmount),
             _detailRow(ctx, 'Description', t.description),
+            if (t.source != null) _detailRow(ctx, 'Source', t.source!),
+            if (t.destination != null) _detailRow(ctx, 'Destination', t.destination!),
             if (t.recipient != null) _detailRow(ctx, 'Recipient', t.recipient!),
             if (t.provider != null) _detailRow(ctx, 'Provider', t.provider!),
             if (t.reference != null)
-              _detailRow(ctx, 'Reference', t.reference!),
+              _copyableRow(ctx, 'Reference', t.reference!),
             _detailRow(ctx, 'Date', _formatDate(t.createdAt)),
             const SizedBox(height: 16),
             StatusBadge(status: t.status),
@@ -97,6 +100,54 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
             child: Text(value,
                 style: const TextStyle(
                     fontWeight: FontWeight.w500, fontSize: 13)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _copyableRow(BuildContext ctx, String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 100,
+            child: Text(label,
+                style: TextStyle(
+                    color: Theme.of(ctx)
+                        .colorScheme
+                        .onSurface
+                        .withValues(alpha: 0.5),
+                    fontSize: 13)),
+          ),
+          Expanded(
+            child: GestureDetector(
+              onTap: () {
+                Clipboard.setData(ClipboardData(text: value));
+                ScaffoldMessenger.of(ctx).showSnackBar(
+                  SnackBar(
+                    content: const Text('Reference copied to clipboard!'),
+                    behavior: SnackBarBehavior.floating,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                    margin: const EdgeInsets.all(20),
+                  ),
+                );
+              },
+              child: Row(
+                children: [
+                  Text(value,
+                      style: const TextStyle(
+                          fontWeight: FontWeight.w500, fontSize: 13)),
+                  const SizedBox(width: 6),
+                  Icon(Icons.copy_rounded,
+                      size: 14,
+                      color: Theme.of(ctx).colorScheme.primary),
+                ],
+              ),
+            ),
           ),
         ],
       ),

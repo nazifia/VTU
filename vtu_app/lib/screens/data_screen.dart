@@ -8,7 +8,7 @@ import '../widgets/custom_text_field.dart';
 import '../widgets/glass_card.dart';
 import '../widgets/contact_picker.dart';
 import '../config/theme.dart';
-
+import '../utils/currency_formatter.dart';
 class DataScreen extends StatefulWidget {
   const DataScreen({super.key});
 
@@ -337,7 +337,7 @@ class _DataScreenState extends State<DataScreen> {
                                           ),
                                           const SizedBox(height: 2),
                                           Text(
-                                            '₦${b.price}',
+                                            b.price.formatCurrency,
                                             style: TextStyle(
                                               fontWeight: FontWeight.w600,
                                               fontSize: 13,

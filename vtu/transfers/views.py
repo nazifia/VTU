@@ -6,7 +6,9 @@ from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import serializers, status
+from django.core.exceptions import ValidationError
 from transactions.models import Transaction
+from wallet.utils import check_spending_limits
 
 
 # ── Serializers ───────────────────────────────────────────────────────────────
@@ -80,9 +82,11 @@ class BankTransferView(APIView):
         wallet = request.user.wallet
 
         try:
+            check_spending_limits(request.user, amount)
             wallet.debit(amount)
-        except ValueError as e:
-            return Response({'detail': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        except (ValueError, ValidationError) as e:
+            msg = e.message if hasattr(e, 'message') else str(e)
+            return Response({'detail': msg}, status=status.HTTP_400_BAD_REQUEST)
 
         ref = f'TRF-{uuid.uuid4().hex[:12].upper()}'
         account_name = _resolve_account_name(d['account_number'], d['bank_code'])
@@ -100,6 +104,8 @@ class BankTransferView(APIView):
                 'bank_code': d['bank_code'],
                 'account_name': account_name,
                 'narration': d.get('narration', ''),
+                'source': 'Npay Wallet',
+                'destination': f"{account_name} ({d['account_number']})",
             },
         )
         return Response({

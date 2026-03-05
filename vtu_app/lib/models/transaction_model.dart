@@ -1,3 +1,5 @@
+import '../utils/currency_formatter.dart';
+
 // Transaction type is derived from the backend `category` field,
 // while credit/debit direction comes from the backend `type` field.
 enum TransactionType { transfer, airtime, data, deposit, electricity, cableTv, water, other }
@@ -16,6 +18,8 @@ class TransactionModel {
   final String? reference;
   /// True if this is an incoming/credit transaction (e.g. wallet funding).
   final bool isCredit;
+  final String? source;
+  final String? destination;
 
   TransactionModel({
     required this.id,
@@ -28,14 +32,13 @@ class TransactionModel {
     required this.createdAt,
     this.reference,
     this.isCredit = false,
+    this.source,
+    this.destination,
   });
 
   String get formattedAmount {
     final prefix = isCredit ? '+' : '-';
-    return '$prefix₦${amount.toStringAsFixed(2).replaceAllMapped(
-          RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
-          (Match m) => '${m[1]},',
-        )}';
+    return '$prefix${amount.formatCurrency}';
   }
 
   String get typeLabel {
@@ -116,6 +119,8 @@ class TransactionModel {
           ? DateTime.parse(json['created_at'])
           : DateTime.now(),
       reference: json['reference'],
+      source: json['source'] ?? json['metadata']?['source'],
+      destination: json['destination'] ?? json['metadata']?['destination'],
     );
   }
 
@@ -131,6 +136,8 @@ class TransactionModel {
       'provider': provider,
       'created_at': createdAt.toIso8601String(),
       'reference': reference,
+      'source': source,
+      'destination': destination,
     };
   }
 }

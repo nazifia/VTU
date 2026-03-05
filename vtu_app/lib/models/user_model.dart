@@ -1,3 +1,5 @@
+import '../utils/currency_formatter.dart';
+
 class UserModel {
   final String id;
   final String phone;
@@ -24,10 +26,7 @@ class UserModel {
   String get fullName => '$firstName $lastName';
 
   String get formattedBalance {
-    return '₦${balance.toStringAsFixed(2).replaceAllMapped(
-          RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
-          (Match m) => '${m[1]},',
-        )}';
+    return balance.formatCurrency;
   }
 
   factory UserModel.fromJson(Map<String, dynamic> json) {

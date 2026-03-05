@@ -10,6 +10,8 @@ class Wallet(models.Model):
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='wallet'
     )
     balance = models.DecimalField(max_digits=14, decimal_places=2, default=Decimal('0.00'))
+    daily_limit = models.DecimalField(max_digits=14, decimal_places=2, default=Decimal('50000.00'))
+    monthly_limit = models.DecimalField(max_digits=14, decimal_places=2, default=Decimal('500000.00'))
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:

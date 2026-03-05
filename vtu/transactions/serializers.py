@@ -5,13 +5,15 @@ from .models import Transaction
 class TransactionSerializer(serializers.ModelSerializer):
     recipient = serializers.SerializerMethodField()
     provider = serializers.SerializerMethodField()
+    source = serializers.SerializerMethodField()
+    destination = serializers.SerializerMethodField()
 
     class Meta:
         model = Transaction
         fields = [
             'id', 'type', 'category', 'amount', 'reference',
             'status', 'description', 'metadata', 'created_at',
-            'recipient', 'provider',
+            'recipient', 'provider', 'source', 'destination'
         ]
         read_only_fields = fields
 
@@ -20,3 +22,9 @@ class TransactionSerializer(serializers.ModelSerializer):
 
     def get_provider(self, obj):
         return obj.metadata.get('provider')
+
+    def get_source(self, obj):
+        return obj.metadata.get('source')
+
+    def get_destination(self, obj):
+        return obj.metadata.get('destination')

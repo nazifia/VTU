@@ -41,6 +41,7 @@ const List<NigerianBank> nigerianBanks = [
   NigerianBank('Zenith Bank', '057'),
 
   // ── Digital / Fintech Banks ───────────────────────────────────────────────
+  NigerianBank('Npay', '000000'), // internal wallet code
   NigerianBank('Carbon (Carbon MFB)', '100026'),
   NigerianBank('FairMoney Microfinance Bank', '090551'),
   NigerianBank('Kuda Microfinance Bank', '090267'),

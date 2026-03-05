@@ -4,7 +4,9 @@ from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from rest_framework import serializers, status
+from django.core.exceptions import ValidationError
 from transactions.models import Transaction
+from wallet.utils import check_spending_limits
 
 
 # ── Serializers ───────────────────────────────────────────────────────────────
@@ -181,9 +183,12 @@ def _ref(prefix: str) -> str:
 
 
 def _process_vtu(
-    user, amount: Decimal, category: str, description: str, metadata: dict
+    user, amount: Decimal, category: str, description: str, metadata: dict,
+    source: str = 'Npay Wallet', destination: str = ''
 ):
     """Debit wallet and record transaction."""
+    check_spending_limits(user, amount)
+    
     wallet = user.wallet
     wallet.debit(amount)  # raises ValueError on insufficient funds
 
@@ -196,7 +201,11 @@ def _process_vtu(
         reference=ref,
         status="success",
         description=description,
-        metadata=metadata,
+        metadata={
+            **metadata,
+            'source': source,
+            'destination': destination,
+        },
     )
     return ref
 
@@ -216,9 +225,11 @@ class AirtimeView(APIView):
                 category="airtime",
                 description=f"{d['provider']} airtime – {d['phone']}",
                 metadata={"phone": d["phone"], "provider": d["provider"]},
+                destination=d["phone"],
             )
-        except ValueError as e:
-            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        except (ValueError, ValidationError) as e:
+            msg = e.message if hasattr(e, 'message') else str(e)
+            return Response({"detail": msg}, status=status.HTTP_400_BAD_REQUEST)
         return Response(
             {
                 "status": "success",
@@ -246,9 +257,11 @@ class DataView(APIView):
                     "provider": d["provider"],
                     "plan_id": d["plan_id"],
                 },
+                destination=d["phone"],
             )
-        except ValueError as e:
-            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        except (ValueError, ValidationError) as e:
+            msg = e.message if hasattr(e, 'message') else str(e)
+            return Response({"detail": msg}, status=status.HTTP_400_BAD_REQUEST)
         return Response(
             {
                 "status": "success",
@@ -277,9 +290,11 @@ class BillsView(APIView):
                     "account_number": d["account_number"],
                     **d.get("metadata", {}),
                 },
+                destination=d["account_number"],
             )
-        except ValueError as e:
-            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        except (ValueError, ValidationError) as e:
+            msg = e.message if hasattr(e, 'message') else str(e)
+            return Response({"detail": msg}, status=status.HTTP_400_BAD_REQUEST)
         return Response(
             {
                 "status": "success",

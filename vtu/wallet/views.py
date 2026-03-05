@@ -45,6 +45,10 @@ class FundWalletView(APIView):
             reference=reference,
             status='success',
             description=f'Wallet funded with ₦{amount}',
+            metadata={
+                'source': 'Bank Transfer / Usd',
+                'destination': 'Npay Wallet',
+            }
         )
         return Response({
             'balance': str(wallet.balance),
@@ -68,44 +72,49 @@ class VirtualAccountsView(APIView):
         # TODO: in production, fetch from user.virtual_account or Paystack API
         accounts = [
             {
+                'bank': 'Npay',
+                'number': '0000000000',
+                'name': 'Npay',
+            },
+            {
                 'bank': 'Wema Bank',
                 'number': '0123456789',
-                'name': 'VTU Wallet Ltd',
+                'name': 'Npay',
             },
             {
                 'bank': 'Sterling Bank',
                 'number': '9876543210',
-                'name': 'VTU Wallet Ltd',
+                'name': 'Npay',
             },
             {
                 'bank': 'Providus Bank',
                 'number': '5544332211',
-                'name': 'VTU Wallet Ltd',
+                'name': 'Npay',
             },
             {
                 'bank': 'GTBank',
                 'number': '0012345678',
-                'name': 'VTU Wallet Ltd',
+                'name': 'Npay',
             },
             {
                 'bank': 'Access Bank',
                 'number': '0087654321',
-                'name': 'VTU Wallet Ltd',
+                'name': 'Npay',
             },
             {
                 'bank': 'Zenith Bank',
                 'number': '2200112233',
-                'name': 'VTU Wallet Ltd',
+                'name': 'Npay',
             },
             {
                 'bank': 'First Bank',
                 'number': '3300998877',
-                'name': 'VTU Wallet Ltd',
+                'name': 'Npay',
             },
             {
                 'bank': 'UBA',
                 'number': '2020304050',
-                'name': 'VTU Wallet Ltd',
+                'name': 'Npay',
             },
         ]
         return Response(accounts)
@@ -185,16 +194,23 @@ class PaystackWebhookView(APIView):
             return Response(status=status.HTTP_501_NOT_IMPLEMENTED)
 
         # 1. Verify Paystack signature
-        import hmac, hashlib
+        import hmac, hashlib, logging
+        logger = logging.getLogger(__name__)
+
         signature = request.headers.get('x-paystack-signature', '')
         computed = hmac.new(
             secret_key.encode(), request.body, hashlib.sha512
         ).hexdigest()
+        
         if not hmac.compare_digest(signature, computed):
+            logger.warning(f"Invalid Paystack webhook signature from {request.META.get('REMOTE_ADDR')}")
             return Response(status=status.HTTP_400_BAD_REQUEST)
 
         event = request.data.get('event')
-        if event != 'charge.success':
+        data = request.data.get('data', {})
+
+        if event != 'charge.success' or data.get('status') != 'success':
+            logger.info(f"Ignoring Paystack event: {event} with status {data.get('status')}")
             return Response(status=status.HTTP_200_OK)   # ignore other events
 
         data = request.data.get('data', {})
@@ -222,8 +238,13 @@ class PaystackWebhookView(APIView):
                 reference=ref,
                 status='success',
                 description=f'Wallet funded via card – ₦{amount}',
+                metadata={
+                    'source': 'Card',
+                    'destination': 'Npay Wallet',
+                }
             )
         except User.DoesNotExist:
+            logger.error(f"Webhook received for unknown user ID: {user_id}. Reference: {ref}")
             pass
 
         return Response(status=status.HTTP_200_OK)

@@ -8,6 +8,7 @@ import '../widgets/custom_text_field.dart';
 import '../widgets/glass_card.dart';
 import '../widgets/contact_picker.dart';
 import '../config/theme.dart';
+import '../utils/currency_formatter.dart';
 
 class AirtimeScreen extends StatefulWidget {
   const AirtimeScreen({super.key});
@@ -107,7 +108,7 @@ class _AirtimeScreenState extends State<AirtimeScreen> {
                 style: TextStyle(fontWeight: FontWeight.w700, fontSize: 20)),
             const SizedBox(height: 8),
             Text(
-              '₦${amount.toStringAsFixed(0)} $_selectedProvider airtime sent to ${_phoneCtrl.text}',
+              '${amount.formatCurrency} $_selectedProvider airtime sent to ${_phoneCtrl.text}',
               textAlign: TextAlign.center,
               style: const TextStyle(color: Colors.grey),
             ),
@@ -401,7 +402,7 @@ class _AirtimeScreenState extends State<AirtimeScreen> {
                                         ),
                                       ),
                                       child: Text(
-                                        '₦${amt.toInt()}',
+                                        amt.formatCurrency,
                                         style: TextStyle(
                                           fontWeight: FontWeight.w600,
                                           color: selected ? Colors.white : null,
