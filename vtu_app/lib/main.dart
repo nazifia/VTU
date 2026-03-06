@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'config/theme.dart';
@@ -46,33 +47,81 @@ void main() async {
   );
 }
 
-class NpayApp extends StatelessWidget {
+class NpayApp extends StatefulWidget {
   const NpayApp({super.key});
+
+  @override
+  State<NpayApp> createState() => _NpayAppState();
+}
+
+class _NpayAppState extends State<NpayApp> {
+  Timer? _authTimer;
+  DateTime _lastInteraction = DateTime.now();
+
+  @override
+  void initState() {
+    super.initState();
+    _resetTimer();
+  }
+
+  void _resetTimer() {
+    if (!mounted) return;
+    
+    // Throttle resetting the timer to at most once per second
+    final now = DateTime.now();
+    if (now.difference(_lastInteraction).inSeconds < 1 && _authTimer != null) {
+      return;
+    }
+    _lastInteraction = now;
+
+    _authTimer?.cancel();
+    _authTimer = Timer(const Duration(minutes: 2), _logoutUser);
+  }
+
+  void _logoutUser() {
+    if (!mounted) return;
+    final auth = context.read<AuthProvider>();
+    if (auth.isAuthenticated) {
+      auth.logout();
+    }
+  }
+
+  @override
+  void dispose() {
+    _authTimer?.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     final theme = context.watch<ThemeProvider>();
 
-    return MaterialApp(
-      title: 'Npay',
-      debugShowCheckedModeBanner: false,
-      theme: AppTheme.lightTheme,
-      darkTheme: AppTheme.darkTheme,
-      themeMode: theme.isDark ? ThemeMode.dark : ThemeMode.light,
-      home: const _AuthGate(),
-      routes: {
-        '/login': (_) => const LoginScreen(),
-        '/register': (_) => const RegisterScreen(),
-        '/home': (_) => const AppShell(),
-        '/transfer': (_) => const TransferScreen(),
-        '/airtime': (_) => const AirtimeScreen(),
-        '/data': (_) => const DataScreen(),
-        '/bills': (_) => const BillsScreen(),
-        '/transactions': (_) => const TransactionsScreen(),
-        '/profile': (_) => const ProfileScreen(),
-        '/settings': (_) => const SettingsScreen(),
-        '/fund-wallet': (_) => const FundWalletScreen(),
-      },
+    return Listener(
+      behavior: HitTestBehavior.translucent,
+      onPointerDown: (_) => _resetTimer(),
+      onPointerMove: (_) => _resetTimer(),
+      onPointerUp: (_) => _resetTimer(),
+      child: MaterialApp(
+        title: 'Npay',
+        debugShowCheckedModeBanner: false,
+        theme: AppTheme.lightTheme,
+        darkTheme: AppTheme.darkTheme,
+        themeMode: theme.isDark ? ThemeMode.dark : ThemeMode.light,
+        home: const _AuthGate(),
+        routes: {
+          '/login': (_) => const LoginScreen(),
+          '/register': (_) => const RegisterScreen(),
+          '/home': (_) => const AppShell(),
+          '/transfer': (_) => const TransferScreen(),
+          '/airtime': (_) => const AirtimeScreen(),
+          '/data': (_) => const DataScreen(),
+          '/bills': (_) => const BillsScreen(),
+          '/transactions': (_) => const TransactionsScreen(),
+          '/profile': (_) => const ProfileScreen(),
+          '/settings': (_) => const SettingsScreen(),
+          '/fund-wallet': (_) => const FundWalletScreen(),
+        },
+      ),
     );
   }
 }
