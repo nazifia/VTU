@@ -431,7 +431,7 @@ class _TransactionTile extends StatelessWidget {
                   : Icons.arrow_upward_rounded,
               color: isCredit
                   ? AppTheme.secondaryEmerald
-                  : AppTheme.primaryIndigo,
+                  : Colors.red,
               size: 22,
             ),
           ),
@@ -450,7 +450,9 @@ class _TransactionTile extends StatelessWidget {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  _formatDate(transaction.createdAt),
+                  transaction.destination ?? _formatDate(transaction.createdAt),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: Theme.of(context).textTheme.bodySmall,
                 ),
               ],
@@ -464,7 +466,7 @@ class _TransactionTile extends StatelessWidget {
                 style: TextStyle(
                   fontWeight: FontWeight.w700,
                   fontSize: 14,
-                  color: isCredit ? AppTheme.secondaryEmerald : null,
+                  color: isCredit ? AppTheme.secondaryEmerald : Colors.red,
                 ),
               ),
               const SizedBox(height: 4),

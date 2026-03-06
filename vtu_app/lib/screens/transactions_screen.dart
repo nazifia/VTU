@@ -30,7 +30,7 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
       final matchesType = _filterType == null || t.type == _filterType;
       final matchesSearch = _searchQuery.isEmpty ||
           t.description.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-          (t.recipient?.contains(_searchQuery) ?? false);
+          (t.recipient?.toLowerCase().contains(_searchQuery.toLowerCase()) ?? false);
       return matchesType && matchesSearch;
     }).toList();
   }
@@ -310,13 +310,18 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
                                                     fontWeight:
                                                         FontWeight.w500)),
                                         const SizedBox(height: 2),
-                                        Text(_formatDate(t.createdAt),
-                                            style: Theme.of(context)
-                                                .textTheme
-                                                .bodySmall),
+                                        Text(
+                                          t.destination ?? _formatDate(t.createdAt),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .bodySmall,
+                                        ),
                                       ],
                                     ),
                                   ),
+                                  const SizedBox(width: 8),
                                   Column(
                                     crossAxisAlignment:
                                         CrossAxisAlignment.end,
@@ -328,7 +333,7 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
                                           fontSize: 14,
                                           color: t.isCredit
                                               ? AppTheme.secondaryEmerald
-                                              : null,
+                                              : Colors.red,
                                         ),
                                       ),
                                       const SizedBox(height: 4),

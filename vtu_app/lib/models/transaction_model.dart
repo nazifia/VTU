@@ -108,7 +108,7 @@ class TransactionModel {
       type: _categoryToType(category),
       isCredit: backendType == 'credit',
       status: TransactionStatus.values.firstWhere(
-        (e) => e.name == json['status'],
+        (e) => e.name.toLowerCase() == (json['status'] as String?)?.toLowerCase(),
         orElse: () => TransactionStatus.pending,
       ),
       amount: (json['amount'] ?? 0) is String
@@ -121,9 +121,9 @@ class TransactionModel {
           ? DateTime.parse(json['created_at'])
           : DateTime.now(),
       reference: json['reference'],
-      source: json['source'] ?? json['metadata']?['source'],
-      destination: json['destination'] ?? json['metadata']?['destination'],
-      accountName: json['account_name'] ?? json['metadata']?['account_name'],
+      source: json['source'] ?? json['metadata']?['source'] ?? json['wallet']?['name'],
+      destination: json['destination'] ?? json['metadata']?['destination'] ?? json['recipient_name'] ?? json['wallet_name'] ?? json['user_name'] ?? json['name'],
+      accountName: json['account_name'] ?? json['metadata']?['account_name'] ?? json['recipient_name'] ?? json['wallet_name'] ?? json['beneficiary_name'],
     );
   }
 
