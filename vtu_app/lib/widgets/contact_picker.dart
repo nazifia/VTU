@@ -5,7 +5,8 @@ import '../config/theme.dart';
 /// Shows a bottom sheet to pick a phone number from device contacts.
 /// Returns the selected phone number string or null if cancelled.
 Future<String?> pickContactPhone(BuildContext context) async {
-  final granted = await FlutterContacts.requestPermission();
+  final status = await FlutterContacts.permissions.request(PermissionType.read);
+  final granted = status == PermissionStatus.granted || status == PermissionStatus.limited;
   if (!granted) {
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -18,8 +19,10 @@ Future<String?> pickContactPhone(BuildContext context) async {
     return null;
   }
 
-  final contacts = await FlutterContacts.getContacts(withProperties: true);
-  contacts.sort((a, b) => a.displayName.compareTo(b.displayName));
+  final contacts = await FlutterContacts.getAll(
+    properties: {ContactProperty.name, ContactProperty.phone},
+  );
+  contacts.sort((a, b) => (a.displayName ?? '').compareTo(b.displayName ?? ''));
 
   if (!context.mounted) return null;
 
@@ -42,7 +45,7 @@ class _ContactPickerSheet extends StatefulWidget {
 class _ContactPickerSheetState extends State<_ContactPickerSheet> {
   String _query = '';
   List<Contact> get _filtered => widget.contacts
-      .where((c) => c.displayName.toLowerCase().contains(_query.toLowerCase()))
+      .where((c) => (c.displayName ?? '').toLowerCase().contains(_query.toLowerCase()))
       .toList();
 
   @override
@@ -148,8 +151,8 @@ class _ContactPickerSheetState extends State<_ContactPickerSheet> {
                                 backgroundColor: AppTheme.primaryIndigo
                                     .withValues(alpha: 0.12),
                                 child: Text(
-                                  c.displayName.isNotEmpty
-                                      ? c.displayName[0].toUpperCase()
+                                  (c.displayName?.isNotEmpty ?? false)
+                                      ? c.displayName![0].toUpperCase()
                                       : '?',
                                   style: const TextStyle(
                                     color: AppTheme.primaryIndigo,
@@ -157,7 +160,7 @@ class _ContactPickerSheetState extends State<_ContactPickerSheet> {
                                   ),
                                 ),
                               ),
-                              title: Text(c.displayName,
+                              title: Text(c.displayName ?? '',
                                   style: const TextStyle(
                                       fontWeight: FontWeight.w600)),
                               subtitle: Text(display),

@@ -31,7 +31,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
         ),
         child: SafeArea(
           child: RefreshIndicator(
-            onRefresh: () => auth.refreshProfile(),
+            onRefresh: () => Future.wait([
+              auth.refreshProfile(),
+              auth.loadTransactions(),
+            ]),
             color: AppTheme.primaryIndigo,
             child: CustomScrollView(
               slivers: [

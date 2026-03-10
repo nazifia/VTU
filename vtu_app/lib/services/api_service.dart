@@ -17,11 +17,18 @@ class ApiService {
   final StorageService _storage;
   final Map<String, _CacheEntry> _cache = {};
 
+  // Per-endpoint cache durations
+  static const _profileTtl        = Duration(minutes: 5);
+  static const _transactionsTtl   = Duration(seconds: 30);
+  static const _virtualAccountTtl = Duration(minutes: 10);
+  static const _dataPlansTtl      = Duration(minutes: 30);
+  static const _defaultTtl        = Duration(seconds: 30);
+
   ApiService(this._storage) {
     _dio = Dio(BaseOptions(
       baseUrl: AppConfig.apiBaseUrl,
-      connectTimeout: const Duration(seconds: 15),
-      receiveTimeout: const Duration(seconds: 15),
+      connectTimeout: const Duration(seconds: 8),
+      receiveTimeout: const Duration(seconds: 8),
       headers: {'Content-Type': 'application/json'},
     ));
     _setupInterceptors();
@@ -71,22 +78,31 @@ class ApiService {
   }
 
   // ── Cached GET ───────────────────────────────────────────────────────────
-  Future<dynamic> _cachedGet(String path,
-      {Map<String, dynamic>? queryParameters}) async {
+  Future<dynamic> _cachedGet(
+    String path, {
+    Map<String, dynamic>? queryParameters,
+    Duration ttl = _defaultTtl,
+  }) async {
     final cacheKey = '$path${queryParameters?.toString() ?? ''}';
     final cached = _cache[cacheKey];
     if (cached != null && cached.isValid) return cached.data;
 
-    final response =
-        await _dio.get(path, queryParameters: queryParameters);
+    final response = await _dio.get(path, queryParameters: queryParameters);
     _cache[cacheKey] = _CacheEntry(
       response.data,
-      DateTime.now().add(Duration(milliseconds: AppConfig.cacheTtlMs)),
+      DateTime.now().add(ttl),
     );
     return response.data;
   }
 
+  /// Clear all cache entries (e.g. on logout).
   void clearCache() => _cache.clear();
+
+  /// Clear only entries whose cache key starts with [prefix].
+  /// Use this for targeted invalidation after mutations so other cached
+  /// data (data plans, virtual accounts, etc.) is not thrown away.
+  void clearCacheFor(String prefix) =>
+      _cache.removeWhere((key, _) => key.startsWith(prefix));
 
   // ── Auth endpoints ───────────────────────────────────────────────────────
   Future<Map<String, dynamic>> login({
@@ -139,21 +155,23 @@ class ApiService {
 
   // ── User endpoints ───────────────────────────────────────────────────────
   Future<UserModel> getProfile() async {
-    final data = await _cachedGet('/user/profile/');
+    final data = await _cachedGet('/user/profile/', ttl: _profileTtl);
     return UserModel.fromJson(data as Map<String, dynamic>);
   }
 
   Future<UserModel> updateProfile(Map<String, dynamic> data) async {
     final response = await _dio.patch('/user/profile/', data: data);
-    clearCache(); // profile changed — bust cache
+    clearCacheFor('/user/profile/'); // only bust profile, not everything
     return UserModel.fromJson(response.data as Map<String, dynamic>);
   }
 
   // ── Transaction endpoints ────────────────────────────────────────────────
   Future<List<TransactionModel>> getTransactions({int page = 1}) async {
-    final data = await _cachedGet('/transactions/', queryParameters: {
-      'page': page,
-    });
+    final data = await _cachedGet(
+      '/transactions/',
+      queryParameters: {'page': page},
+      ttl: _transactionsTtl,
+    );
     final list = (data is Map && data['results'] != null)
         ? data['results'] as List
         : data is List
@@ -195,9 +213,13 @@ class ApiService {
 
   Future<List<Map<String, dynamic>>> getDataPlans({String? provider}) async {
     final queryParams = provider != null ? {'provider': provider} : null;
-    final response = await _dio.get('/vtu/data/plans/', queryParameters: queryParams);
-    final data = response.data as Map<String, dynamic>;
-    return (data['plans'] as List).cast<Map<String, dynamic>>();
+    final data = await _cachedGet(
+      '/vtu/data/plans/',
+      queryParameters: queryParams,
+      ttl: _dataPlansTtl,
+    );
+    return ((data as Map<String, dynamic>)['plans'] as List)
+        .cast<Map<String, dynamic>>();
   }
 
   Future<Map<String, dynamic>> payBill({
@@ -253,14 +275,19 @@ class ApiService {
       'amount': amount,
       'reference': ref,
     });
-    clearCache(); // balance changed
+    // Only bust balance-sensitive caches, not virtual accounts / data plans
+    clearCacheFor('/user/profile/');
+    clearCacheFor('/transactions/');
     return response.data as Map<String, dynamic>;
   }
 
   /// Fetches the list of virtual bank accounts users can transfer money to
   /// in order to top up their wallet.
   Future<List<Map<String, dynamic>>> getVirtualAccounts() async {
-    final data = await _cachedGet('/wallet/virtual-accounts/');
+    final data = await _cachedGet(
+      '/wallet/virtual-accounts/',
+      ttl: _virtualAccountTtl,
+    );
     final list = data is List ? data : (data['accounts'] as List? ?? []);
     return list.cast<Map<String, dynamic>>();
   }

@@ -28,7 +28,10 @@
       "Bash(cd \"C:\\\\Users\\\\Dell\\\\Desktop\\\\VTU\\\\vtu\" && set DEBUG=True && python manage.py check 2>&1)",
       "Bash(cd \"C:\\\\Users\\\\Dell\\\\Desktop\\\\VTU\\\\vtu\" && DEBUG=True python manage.py check 2>&1)",
       "Bash(cd \"C:\\\\Users\\\\Dell\\\\Desktop\\\\VTU\\\\vtu\" && DEBUG=True python manage.py makemigrations accounts --name add_transaction_pin 2>&1)",
-      "Bash(cd \"C:\\\\Users\\\\Dell\\\\Desktop\\\\VTU\\\\vtu\" && DEBUG=True python manage.py migrate 2>&1)"
+      "Bash(cd \"C:\\\\Users\\\\Dell\\\\Desktop\\\\VTU\\\\vtu\" && DEBUG=True python manage.py migrate 2>&1)",
+      "Read(//c/Users/Dell/AppData/Local/Pub/Cache/hosted/pub.dev/**)",
+      "Read(//c/Users/Dell/AppData/Local/Pub/Cache/**)",
+      "Bash(grep -n \"displayName\\\\|String\" /c/Users/Dell/AppData/Local/Pub/Cache/hosted/pub.dev/flutter_contacts-2.0.0/lib/models/contact/contact.dart | head -20\ngrep -n \"request\\\\|Future<bool>\" /c/Users/Dell/AppData/Local/Pub/Cache/hosted/pub.dev/flutter_contacts-2.0.0/lib/api/permissions_api.dart | head -20)"
     ]
   }
 }

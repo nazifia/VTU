@@ -38,7 +38,9 @@ class AuthProvider with ChangeNotifier {
         _user = await _api.getProfile();
         _state = AuthState.authenticated;
         notifyListeners();
-        await loadTransactions();
+        // Load transactions in the background — don't block the auth gate.
+        // The home screen appears immediately; the transaction list fills in.
+        loadTransactions();
       } catch (_) {
         await _storage.clearTokens();
         _state = AuthState.unauthenticated;
@@ -67,7 +69,7 @@ class AuthProvider with ChangeNotifier {
       }
       _state = AuthState.authenticated;
       notifyListeners();
-      await loadTransactions();
+      loadTransactions(); // background — home screen shows immediately
       return true;
     } on DioException catch (e) {
       _errorMessage = _parseError(e);
@@ -96,7 +98,7 @@ class AuthProvider with ChangeNotifier {
       _user = await _api.getProfile();
       _state = AuthState.authenticated;
       notifyListeners();
-      await loadTransactions();
+      loadTransactions(); // background
       return true;
     } catch (_) {
       _state = AuthState.unauthenticated;
@@ -163,7 +165,7 @@ class AuthProvider with ChangeNotifier {
       }
       _state = AuthState.authenticated;
       notifyListeners();
-      await loadTransactions();
+      loadTransactions(); // background
       return true;
     } on DioException catch (e) {
       _errorMessage = _parseError(e);
@@ -174,10 +176,10 @@ class AuthProvider with ChangeNotifier {
   }
 
   /// Fetches fresh transactions from the server.
-  /// Always busts the API cache first so mutations are immediately reflected.
+  /// Cache clearing is handled by the caller before this is invoked after
+  /// mutations; for background refreshes the 30-second TTL handles staleness.
   Future<void> loadTransactions() async {
     try {
-      _api.clearCache();
       _transactions = await _api.getTransactions();
       notifyListeners();
     } catch (_) {}
@@ -186,10 +188,18 @@ class AuthProvider with ChangeNotifier {
   /// Refreshes the user profile (and wallet balance) from the server.
   Future<void> refreshProfile() async {
     try {
-      _api.clearCache();
       _user = await _api.getProfile();
       notifyListeners();
     } catch (_) {}
+  }
+
+  /// Called after every mutation (purchase, transfer, fund).
+  /// Clears only the stale caches then reloads profile + transactions in
+  /// parallel — cuts post-transaction wait roughly in half.
+  Future<void> _postMutationRefresh() async {
+    _api.clearCacheFor('/user/profile/');
+    _api.clearCacheFor('/transactions/');
+    await Future.wait([refreshProfile(), loadTransactions()]);
   }
 
   Future<bool> purchaseAirtime({
@@ -198,11 +208,8 @@ class AuthProvider with ChangeNotifier {
     required double amount,
   }) async {
     try {
-      await _api.purchaseAirtime(
-          phone: phone, provider: provider, amount: amount);
-      // loadTransactions clears cache before fetching — balance + transactions both updated.
-      await loadTransactions();
-      await refreshProfile();
+      await _api.purchaseAirtime(phone: phone, provider: provider, amount: amount);
+      await _postMutationRefresh();
       return true;
     } on DioException catch (e) {
       _errorMessage = _parseError(e);
@@ -219,13 +226,9 @@ class AuthProvider with ChangeNotifier {
   }) async {
     try {
       await _api.purchaseData(
-        phone: phone,
-        provider: provider,
-        planId: planId,
-        amount: amount,
+        phone: phone, provider: provider, planId: planId, amount: amount,
       );
-      await loadTransactions();
-      await refreshProfile();
+      await _postMutationRefresh();
       return true;
     } on DioException catch (e) {
       _errorMessage = _parseError(e);
@@ -242,13 +245,10 @@ class AuthProvider with ChangeNotifier {
   }) async {
     try {
       await _api.bankTransfer(
-        accountNumber: accountNumber,
-        bankCode: bankCode,
-        amount: amount,
-        narration: narration,
+        accountNumber: accountNumber, bankCode: bankCode,
+        amount: amount, narration: narration,
       );
-      await loadTransactions();
-      await refreshProfile();
+      await _postMutationRefresh();
       return true;
     } on DioException catch (e) {
       _errorMessage = _parseError(e);
@@ -266,14 +266,10 @@ class AuthProvider with ChangeNotifier {
   }) async {
     try {
       await _api.payBill(
-        billType: billType,
-        provider: provider,
-        accountNumber: accountNumber,
-        amount: amount,
-        metadata: metadata,
+        billType: billType, provider: provider,
+        accountNumber: accountNumber, amount: amount, metadata: metadata,
       );
-      await loadTransactions();
-      await refreshProfile();
+      await _postMutationRefresh();
       return true;
     } on DioException catch (e) {
       _errorMessage = _parseError(e);
@@ -300,11 +296,9 @@ class AuthProvider with ChangeNotifier {
         notifyListeners();
       }
 
-      // Fetch fresh transactions (cache is already cleared by api.fundWallet).
-      await loadTransactions();
-
-      // Sync full profile to capture any server-side changes.
-      await refreshProfile();
+      // Cache for profile + transactions already cleared by api.fundWallet.
+      // Fetch both in parallel.
+      await Future.wait([loadTransactions(), refreshProfile()]);
       return true;
     } on DioException catch (e) {
       _errorMessage = _parseError(e);
