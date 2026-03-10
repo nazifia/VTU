@@ -24,7 +24,11 @@
       "Bash(\"/c/Users/Dell/AppData/Local/Android/sdk/platform-tools/adb.exe\" -s emulator-5554 wait-for-device && \"/c/Users/Dell/AppData/Local/Android/sdk/platform-tools/adb.exe\" -s emulator-5554 shell getprop sys.boot_completed 2>&1)",
       "Bash(\"/c/Users/Dell/AppData/Local/Android/sdk/platform-tools/adb.exe\" devices:*)",
       "Bash(\"/c/Users/Dell/AppData/Local/Android/sdk/platform-tools/adb.exe\" -s emulator-5554 shell getprop sys.boot_completed 2>&1)",
-      "Bash(\"/c/Users/Dell/AppData/Local/Android/sdk/platform-tools/adb.exe\" -s emulator-5554 shell getprop init.svc.bootanim 2>&1)"
+      "Bash(\"/c/Users/Dell/AppData/Local/Android/sdk/platform-tools/adb.exe\" -s emulator-5554 shell getprop init.svc.bootanim 2>&1)",
+      "Bash(cd \"C:\\\\Users\\\\Dell\\\\Desktop\\\\VTU\\\\vtu\" && set DEBUG=True && python manage.py check 2>&1)",
+      "Bash(cd \"C:\\\\Users\\\\Dell\\\\Desktop\\\\VTU\\\\vtu\" && DEBUG=True python manage.py check 2>&1)",
+      "Bash(cd \"C:\\\\Users\\\\Dell\\\\Desktop\\\\VTU\\\\vtu\" && DEBUG=True python manage.py makemigrations accounts --name add_transaction_pin 2>&1)",
+      "Bash(cd \"C:\\\\Users\\\\Dell\\\\Desktop\\\\VTU\\\\vtu\" && DEBUG=True python manage.py migrate 2>&1)"
     ]
   }
 }

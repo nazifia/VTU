@@ -5,6 +5,19 @@ from django.db.models import Sum
 from transactions.models import Transaction
 
 
+def verify_transaction_pin(user, raw_pin: str):
+    """
+    Raise ValidationError if the supplied PIN does not match the user's
+    transaction PIN, or if no transaction PIN has been set yet.
+    """
+    if not user.has_transaction_pin:
+        raise ValidationError(
+            'Transaction PIN not set. Please set your transaction PIN before making payments.'
+        )
+    if not user.check_transaction_pin(raw_pin):
+        raise ValidationError('Incorrect transaction PIN.')
+
+
 def check_spending_limits(user, amount: Decimal):
     """
     Checks if a requested outgoing transaction (amount) exceeds the user's

@@ -13,8 +13,17 @@ SECRET_KEY = os.environ.get(
     'SECRET_KEY',
     'django-insecure-change-me-in-production-use-env-var'
 )
-DEBUG = os.environ.get('DEBUG', 'True') == 'True'
-ALLOWED_HOSTS = ['*']
+# Default to False so production deployments are safe without explicit config.
+# Set DEBUG=True in your local .env for development.
+DEBUG = os.environ.get('DEBUG', 'False') == 'True'
+
+if not DEBUG and SECRET_KEY.startswith('django-insecure-'):
+    raise RuntimeError(
+        'SECRET_KEY is using the insecure default. '
+        'Set a strong SECRET_KEY environment variable before running in production.'
+    )
+
+ALLOWED_HOSTS = ['*'] if DEBUG else os.environ.get('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
 
 # ── Apps ──────────────────────────────────────────────────────────────────────
 INSTALLED_APPS = [
@@ -101,6 +110,7 @@ REST_FRAMEWORK = {
     'DEFAULT_THROTTLE_RATES': {
         'anon': '30/minute',
         'user': '100/minute',
+        'otp': '5/minute',   # strict limit for OTP send/verify endpoints
     },
 }
 
@@ -114,7 +124,10 @@ SIMPLE_JWT = {
 }
 
 # ── CORS ──────────────────────────────────────────────────────────────────────
-CORS_ALLOW_ALL_ORIGINS = True  # tighten to CORS_ALLOWED_ORIGINS in production
+if DEBUG:
+    CORS_ALLOW_ALL_ORIGINS = True
+else:
+    CORS_ALLOWED_ORIGINS = os.environ.get('CORS_ALLOWED_ORIGINS', '').split(',')
 
 # ── I18n ──────────────────────────────────────────────────────────────────────
 LANGUAGE_CODE = 'en-us'

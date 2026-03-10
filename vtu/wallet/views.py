@@ -1,7 +1,9 @@
 import os
 import uuid
+import logging
 import requests
 from decimal import Decimal
+from django.db import transaction
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -9,6 +11,8 @@ from rest_framework import status
 from .models import Wallet
 from .serializers import WalletSerializer, FundWalletSerializer
 from transactions.models import Transaction
+
+logger = logging.getLogger(__name__)
 
 
 class WalletDetailView(APIView):
@@ -28,6 +32,7 @@ class FundWalletView(APIView):
     """
     permission_classes = [IsAuthenticated]
 
+    @transaction.atomic
     def post(self, request):
         serializer = FundWalletSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -141,17 +146,26 @@ class InitiateCardPaymentView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
-        amount = request.data.get('amount')
-        if not amount:
+        raw_amount = request.data.get('amount')
+        if not raw_amount:
             return Response(
-                {'detail': 'amount is required'},
+                {'detail': 'amount is required.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        try:
+            amount = Decimal(str(raw_amount))
+            if amount <= 0 or amount > Decimal('1000000'):
+                raise ValueError
+        except Exception:
+            return Response(
+                {'detail': 'amount must be a positive number not exceeding ₦1,000,000.'},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
         secret_key = os.environ.get('PAYSTACK_SECRET_KEY', '')
         if not secret_key:
             return Response(
-                {'detail': 'Payment gateway not configured. Set PAYSTACK_SECRET_KEY.'},
+                {'detail': 'Payment gateway not configured.'},
                 status=status.HTTP_503_SERVICE_UNAVAILABLE,
             )
 
@@ -165,7 +179,7 @@ class InitiateCardPaymentView(APIView):
                 },
                 json={
                     'email': request.user.email or f'{request.user.phone}@vtu.app',
-                    'amount': int(Decimal(str(amount)) * 100),   # Paystack uses kobo
+                    'amount': int(amount * 100),   # Paystack uses kobo
                     'reference': ref,
                     'callback_url': f'{os.environ.get("APP_BASE_URL","")}/payment/callback/',
                     'metadata': {
@@ -182,9 +196,10 @@ class InitiateCardPaymentView(APIView):
                 'access_code': data['access_code'],
                 'reference': ref,
             })
-        except requests.exceptions.RequestException as exc:
+        except requests.exceptions.RequestException:
+            logger.exception('Paystack initiate payment error for user %s', request.user.id)
             return Response(
-                {'detail': f'Payment gateway error: {exc}'},
+                {'detail': 'Payment gateway unavailable. Please try again later.'},
                 status=status.HTTP_502_BAD_GATEWAY,
             )
 
@@ -231,28 +246,27 @@ class PaystackWebhookView(APIView):
         if Transaction.objects.filter(reference=ref).exists():
             return Response(status=status.HTTP_200_OK)
 
-        # 3. Credit wallet
+        # 3. Credit wallet (atomic: both credit and transaction record succeed or neither does)
         from django.contrib.auth import get_user_model
         User = get_user_model()
         try:
             user = User.objects.get(id=user_id)
-            wallet = user.wallet
-            wallet.credit(amount)
-            Transaction.objects.create(
-                user=user,
-                type='credit',
-                category='wallet_funding',
-                amount=amount,
-                reference=ref,
-                status='success',
-                description=f'Wallet funded via card – ₦{amount}',
-                metadata={
-                    'source': 'Card',
-                    'destination': 'Npay Wallet',
-                }
-            )
+            with transaction.atomic():
+                user.wallet.credit(amount)
+                Transaction.objects.create(
+                    user=user,
+                    type='credit',
+                    category='wallet_funding',
+                    amount=amount,
+                    reference=ref,
+                    status='success',
+                    description=f'Wallet funded via card – ₦{amount}',
+                    metadata={
+                        'source': 'Card',
+                        'destination': 'Npay Wallet',
+                    }
+                )
         except User.DoesNotExist:
-            logger.error(f"Webhook received for unknown user ID: {user_id}. Reference: {ref}")
-            pass
+            logger.error('Webhook received for unknown user_id=%s ref=%s', user_id, ref)
 
         return Response(status=status.HTTP_200_OK)

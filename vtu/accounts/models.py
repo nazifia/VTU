@@ -1,5 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
+from django.contrib.auth.hashers import make_password, check_password as _check_password
 from django.utils import timezone
 from django.db.models.signals import post_save
 from django.dispatch import receiver
@@ -35,6 +36,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     first_name = models.CharField(max_length=50)
     last_name = models.CharField(max_length=50)
     avatar = models.ImageField(upload_to='avatars/', blank=True, null=True)
+    transaction_pin = models.CharField(max_length=128, blank=True, null=True)
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
     is_verified = models.BooleanField(default=False)
@@ -51,6 +53,20 @@ class User(AbstractBaseUser, PermissionsMixin):
     @property
     def full_name(self):
         return f'{self.first_name} {self.last_name}'.strip()
+
+    @property
+    def has_transaction_pin(self) -> bool:
+        return bool(self.transaction_pin)
+
+    def set_transaction_pin(self, raw_pin: str):
+        """Hash and store the transaction PIN (separate from login password)."""
+        self.transaction_pin = make_password(raw_pin)
+
+    def check_transaction_pin(self, raw_pin: str) -> bool:
+        """Return True if raw_pin matches the stored transaction PIN hash."""
+        if not self.transaction_pin:
+            return False
+        return _check_password(raw_pin, self.transaction_pin)
 
     def __str__(self):
         return self.phone

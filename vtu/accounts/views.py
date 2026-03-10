@@ -1,10 +1,11 @@
-import random
+import secrets
 from django.utils import timezone
 from django.conf import settings
 from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework.throttling import AnonRateThrottle
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenRefreshView
 from rest_framework_simplejwt.exceptions import TokenError
@@ -26,10 +27,16 @@ User = get_user_model()
 OTP_EXPIRY = getattr(settings, "OTP_EXPIRY_MINUTES", 10)
 
 
+class OTPRateThrottle(AnonRateThrottle):
+    """Strict per-IP throttle for OTP send and verify endpoints."""
+    scope = 'otp'
+
+
 def _generate_otp():
     if getattr(settings, "DEBUG", False):
         return "123456"
-    return str(random.randint(100000, 999999))
+    # secrets.randbelow is cryptographically secure (uses os.urandom)
+    return f"{secrets.randbelow(900000) + 100000}"
 
 
 def _get_tokens(user):
@@ -63,11 +70,11 @@ class RegisterView(APIView):
         code = _generate_otp()
         OTP.objects.create(phone=data["phone"], code=code, purpose="register")
 
-        # In production: send via SMS gateway. For dev, return in response.
-        return Response(
-            {"message": f"OTP sent to {data['phone']}", "otp": code},
-            status=status.HTTP_201_CREATED,
-        )
+        # In production: send via SMS gateway. Only expose OTP in debug mode.
+        response_data = {"message": f"OTP sent to {data['phone']}"}
+        if settings.DEBUG:
+            response_data["otp"] = code
+        return Response(response_data, status=status.HTTP_201_CREATED)
 
 
 # ── Login ─────────────────────────────────────────────────────────────────────
@@ -99,6 +106,7 @@ class LoginView(APIView):
 # ── OTP: Send ─────────────────────────────────────────────────────────────────
 class SendOTPView(APIView):
     permission_classes = [AllowAny]
+    throttle_classes = [OTPRateThrottle]
 
     def post(self, request):
         serializer = OTPRequestSerializer(data=request.data)
@@ -108,13 +116,17 @@ class SendOTPView(APIView):
         code = _generate_otp()
         OTP.objects.create(phone=phone, code=code, purpose="register")
 
-        # In production: send SMS. For dev, return OTP in response.
-        return Response({"message": "OTP sent", "otp": code})
+        # In production: send via SMS gateway. Only expose OTP in debug mode.
+        response_data = {"message": "OTP sent"}
+        if settings.DEBUG:
+            response_data["otp"] = code
+        return Response(response_data)
 
 
 # ── OTP: Verify ───────────────────────────────────────────────────────────────
 class VerifyOTPView(APIView):
     permission_classes = [AllowAny]
+    throttle_classes = [OTPRateThrottle]
 
     def post(self, request):
         serializer = OTPVerifySerializer(data=request.data)

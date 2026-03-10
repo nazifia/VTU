@@ -109,6 +109,7 @@ class TransactionAdmin(admin.ModelAdmin):
     actions = [
         'mark_success',
         'mark_failed',
+        'refund_to_wallet',
         'export_csv',
     ]
 
@@ -162,8 +163,8 @@ class TransactionAdmin(admin.ModelAdmin):
         color = '#10B981' if obj.type == 'credit' else '#EF4444'
         prefix = '+' if obj.type == 'credit' else '-'
         return format_html(
-            '<strong style="color:{};">{}₦{:,.2f}</strong>',
-            color, prefix, obj.amount,
+            '<strong style="color:{};">{}₦{}</strong>',
+            color, prefix, f"{obj.amount:,.2f}",
         )
 
     @admin.display(description='Status', ordering='status')
@@ -204,6 +205,40 @@ class TransactionAdmin(admin.ModelAdmin):
     def mark_failed(self, request, queryset):
         updated = queryset.exclude(status='failed').update(status='failed')
         self.message_user(request, f'{updated} transaction(s) marked as failed.')
+
+    @admin.action(description='↩️ Refund selected failed debit transactions to wallet')
+    def refund_to_wallet(self, request, queryset):
+        import uuid
+        eligible = queryset.filter(type='debit', status='failed').select_related('user', 'user__wallet')
+        skipped = queryset.exclude(type='debit', status='failed').count()
+        refunded = 0
+        errors = 0
+        for txn in eligible:
+            try:
+                txn.user.wallet.credit(txn.amount)
+                Transaction.objects.create(
+                    user=txn.user,
+                    type='credit',
+                    category='other',
+                    amount=txn.amount,
+                    reference=f'REFUND-{uuid.uuid4().hex[:12].upper()}',
+                    status='success',
+                    description=f'Admin refund for failed transaction {txn.reference}',
+                    metadata={'refunded_from': str(txn.id)},
+                )
+                refunded += 1
+            except Exception:
+                errors += 1
+        if refunded:
+            self.message_user(request, f'₦ refunded to {refunded} wallet(s) successfully.')
+        if skipped:
+            self.message_user(
+                request,
+                f'{skipped} transaction(s) skipped — only failed debit transactions can be refunded.',
+                level=messages.WARNING,
+            )
+        if errors:
+            self.message_user(request, f'{errors} refund(s) failed.', level=messages.ERROR)
 
     @admin.action(description='📥 Export selected transactions to CSV')
     def export_csv(self, request, queryset):
@@ -252,6 +287,12 @@ class TransactionAdmin(admin.ModelAdmin):
             failed_count=Count('id', filter=Q(status='failed')),
         )
         extra_context = extra_context or {}
-        extra_context['summary'] = agg
+        extra_context['summary'] = {
+            'total':         agg['total'] or 0,
+            'credit_sum':    f"₦{agg['credit_sum'] or 0:,.2f}",
+            'debit_sum':     f"₦{agg['debit_sum'] or 0:,.2f}",
+            'success_count': agg['success_count'] or 0,
+            'failed_count':  agg['failed_count'] or 0,
+        }
         return super().changelist_view(request, extra_context=extra_context)
 

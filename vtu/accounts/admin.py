@@ -41,6 +41,7 @@ class UserAdmin(BaseUserAdmin):
         'phone', 'full_name', 'email',
         'wallet_balance_display',
         'is_verified', 'is_active', 'is_staff',
+        'txn_pin_set_display',
         'transaction_count_display',
         'date_joined',
     ]
@@ -76,11 +77,21 @@ class UserAdmin(BaseUserAdmin):
             'classes': ('wide',),
             'fields': ('phone', 'first_name', 'last_name', 'email', 'password1', 'password2'),
         }),
+        ('Permissions', {
+            'classes': ('wide',),
+            'fields': ('is_active', 'is_verified', 'is_staff', 'is_superuser'),
+        }),
     )
 
     actions = ['verify_users', 'deactivate_users', 'activate_users']
 
     # ── Custom list columns ──────────────────────────────────────────────────
+
+    @admin.display(description='Txn PIN')
+    def txn_pin_set_display(self, obj):
+        if obj.has_transaction_pin:
+            return format_html('<span style="color:#10B981; font-weight:700;">&#10003; Set</span>')
+        return format_html('<span style="color:#EF4444;">&#10007; Not set</span>')
 
     @admin.display(description='Wallet Balance', ordering='wallet__balance')
     def wallet_balance_display(self, obj):

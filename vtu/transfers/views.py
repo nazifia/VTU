@@ -2,21 +2,38 @@ import os
 import uuid
 import requests
 from decimal import Decimal
+from django.db import transaction
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import serializers, status
 from django.core.exceptions import ValidationError
 from transactions.models import Transaction
-from wallet.utils import check_spending_limits
+from wallet.utils import check_spending_limits, verify_transaction_pin
 
 
 # ── Serializers ───────────────────────────────────────────────────────────────
 class BankTransferSerializer(serializers.Serializer):
-    account_number = serializers.CharField(min_length=10, max_length=10)
-    bank_code = serializers.CharField(max_length=10)
-    amount = serializers.DecimalField(max_digits=10, decimal_places=2, min_value=100)
-    narration = serializers.CharField(max_length=200, required=False, allow_blank=True)
+    account_number  = serializers.CharField(min_length=10, max_length=10)
+    bank_code       = serializers.CharField(max_length=10)
+    amount          = serializers.DecimalField(max_digits=10, decimal_places=2, min_value=100, max_value=1_000_000)
+    narration       = serializers.CharField(max_length=200, required=False, allow_blank=True)
+    transaction_pin = serializers.CharField(min_length=4, max_length=6, write_only=True)
+
+    def validate_account_number(self, value):
+        if not value.isdigit():
+            raise serializers.ValidationError('Account number must contain digits only.')
+        return value
+
+    def validate_bank_code(self, value):
+        if not value.isdigit():
+            raise serializers.ValidationError('Bank code must contain digits only.')
+        return value
+
+    def validate_transaction_pin(self, value):
+        if not value.isdigit():
+            raise serializers.ValidationError('Transaction PIN must be digits only.')
+        return value
 
 
 class AccountVerifySerializer(serializers.Serializer):
@@ -74,6 +91,7 @@ class VerifyAccountView(APIView):
 class BankTransferView(APIView):
     permission_classes = [IsAuthenticated]
 
+    @transaction.atomic
     def post(self, request):
         s = BankTransferSerializer(data=request.data)
         s.is_valid(raise_exception=True)
@@ -82,6 +100,7 @@ class BankTransferView(APIView):
         wallet = request.user.wallet
 
         try:
+            verify_transaction_pin(request.user, d['transaction_pin'])
             check_spending_limits(request.user, amount)
             wallet.debit(amount)
         except (ValueError, ValidationError) as e:

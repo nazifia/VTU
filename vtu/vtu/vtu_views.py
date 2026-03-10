@@ -1,35 +1,50 @@
 import uuid
 from decimal import Decimal
+from django.db import transaction
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from rest_framework import serializers, status
 from django.core.exceptions import ValidationError
 from transactions.models import Transaction
-from wallet.utils import check_spending_limits
+from wallet.utils import check_spending_limits, verify_transaction_pin
 
 
 # ── Serializers ───────────────────────────────────────────────────────────────
+def _validate_txn_pin(value):
+    if not value.isdigit():
+        raise serializers.ValidationError('Transaction PIN must be digits only.')
+    return value
+
+
 class AirtimeSerializer(serializers.Serializer):
-    phone = serializers.CharField(max_length=15)
-    provider = serializers.ChoiceField(choices=["MTN", "Glo", "Airtel", "9mobile"])
-    amount = serializers.DecimalField(max_digits=10, decimal_places=2, min_value=10)
+    phone           = serializers.CharField(max_length=15)
+    provider        = serializers.ChoiceField(choices=["MTN", "Glo", "Airtel", "9mobile"])
+    amount          = serializers.DecimalField(max_digits=10, decimal_places=2, min_value=10, max_value=50_000)
+    transaction_pin = serializers.CharField(min_length=4, max_length=6, write_only=True)
+
+    validate_transaction_pin = _validate_txn_pin
 
 
 class DataSerializer(serializers.Serializer):
-    phone = serializers.CharField(max_length=15)
-    provider = serializers.ChoiceField(choices=["MTN", "Glo", "Airtel", "9mobile"])
-    plan_id = serializers.CharField(max_length=50)
-    amount = serializers.DecimalField(max_digits=10, decimal_places=2, min_value=50)
+    phone           = serializers.CharField(max_length=15)
+    provider        = serializers.ChoiceField(choices=["MTN", "Glo", "Airtel", "9mobile"])
+    plan_id         = serializers.CharField(max_length=50)
+    amount          = serializers.DecimalField(max_digits=10, decimal_places=2, min_value=50, max_value=50_000)
+    transaction_pin = serializers.CharField(min_length=4, max_length=6, write_only=True)
+
+    validate_transaction_pin = _validate_txn_pin
 
 
 class BillsSerializer(serializers.Serializer):
-    BILL_TYPES = ["electricity", "cable_tv", "water"]
-    bill_type = serializers.ChoiceField(choices=BILL_TYPES)
-    provider = serializers.CharField(max_length=100)
-    account_number = serializers.CharField(max_length=50)
-    amount = serializers.DecimalField(max_digits=10, decimal_places=2, min_value=100)
-    metadata = serializers.JSONField(required=False, default=dict)
+    BILL_TYPES      = ["electricity", "cable_tv", "water"]
+    bill_type       = serializers.ChoiceField(choices=BILL_TYPES)
+    provider        = serializers.CharField(max_length=100)
+    account_number  = serializers.CharField(max_length=50)
+    amount          = serializers.DecimalField(max_digits=10, decimal_places=2, min_value=100, max_value=500_000)
+    transaction_pin = serializers.CharField(min_length=4, max_length=6, write_only=True)
+
+    validate_transaction_pin = _validate_txn_pin
 
 
 # ── Data Plans ───────────────────────────────────────────────────────────────
@@ -186,27 +201,26 @@ def _process_vtu(
     user, amount: Decimal, category: str, description: str, metadata: dict,
     source: str = 'Npay Wallet', destination: str = ''
 ):
-    """Debit wallet and record transaction."""
+    """Debit wallet and record transaction atomically."""
     check_spending_limits(user, amount)
-    
-    wallet = user.wallet
-    wallet.debit(amount)  # raises ValueError on insufficient funds
 
-    ref = _ref(category[:3].upper())
-    Transaction.objects.create(
-        user=user,
-        type="debit",
-        category=category,
-        amount=amount,
-        reference=ref,
-        status="success",
-        description=description,
-        metadata={
-            **metadata,
-            'source': source,
-            'destination': destination,
-        },
-    )
+    with transaction.atomic():
+        user.wallet.debit(amount)  # raises ValueError on insufficient funds
+        ref = _ref(category[:3].upper())
+        Transaction.objects.create(
+            user=user,
+            type="debit",
+            category=category,
+            amount=amount,
+            reference=ref,
+            status="success",
+            description=description,
+            metadata={
+                **metadata,
+                'source': source,
+                'destination': destination,
+            },
+        )
     return ref
 
 
@@ -219,6 +233,7 @@ class AirtimeView(APIView):
         s.is_valid(raise_exception=True)
         d = s.validated_data
         try:
+            verify_transaction_pin(request.user, d["transaction_pin"])
             ref = _process_vtu(
                 user=request.user,
                 amount=d["amount"],
@@ -247,6 +262,7 @@ class DataView(APIView):
         s.is_valid(raise_exception=True)
         d = s.validated_data
         try:
+            verify_transaction_pin(request.user, d["transaction_pin"])
             ref = _process_vtu(
                 user=request.user,
                 amount=d["amount"],
@@ -280,6 +296,7 @@ class BillsView(APIView):
         d = s.validated_data
         bill_type = d["bill_type"]
         try:
+            verify_transaction_pin(request.user, d["transaction_pin"])
             ref = _process_vtu(
                 user=request.user,
                 amount=d["amount"],
@@ -288,7 +305,6 @@ class BillsView(APIView):
                 metadata={
                     "provider": d["provider"],
                     "account_number": d["account_number"],
-                    **d.get("metadata", {}),
                 },
                 destination=d["account_number"],
             )

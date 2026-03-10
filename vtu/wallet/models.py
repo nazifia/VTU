@@ -21,11 +21,27 @@ class Wallet(models.Model):
         return f'{self.user.phone} — ₦{self.balance}'
 
     def credit(self, amount: Decimal):
-        self.balance += amount
-        self.save(update_fields=['balance', 'updated_at'])
+        """Atomically credit the wallet using a DB-level UPDATE (no race condition)."""
+        from django.db.models import F
+        from django.utils import timezone as tz
+        Wallet.objects.filter(pk=self.pk).update(
+            balance=F('balance') + amount,
+            updated_at=tz.now(),
+        )
+        self.refresh_from_db()
 
     def debit(self, amount: Decimal):
-        if self.balance < amount:
+        """
+        Atomically debit the wallet using a conditional DB-level UPDATE.
+        The balance check and subtraction happen in a single SQL statement,
+        eliminating the TOCTOU race condition.
+        """
+        from django.db.models import F
+        from django.utils import timezone as tz
+        updated = Wallet.objects.filter(pk=self.pk, balance__gte=amount).update(
+            balance=F('balance') - amount,
+            updated_at=tz.now(),
+        )
+        if not updated:
             raise ValueError('Insufficient wallet balance.')
-        self.balance -= amount
-        self.save(update_fields=['balance', 'updated_at'])
+        self.refresh_from_db()

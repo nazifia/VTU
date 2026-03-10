@@ -13,6 +13,7 @@ class WalletAdmin(admin.ModelAdmin):
         'user_phone', 'user_full_name',
         'balance_display', 'updated_at',
         'credit_total_display', 'debit_total_display',
+        'limits_display',
         'view_transactions_link',
     ]
     list_filter = ['updated_at']
@@ -24,12 +25,16 @@ class WalletAdmin(admin.ModelAdmin):
         ('Wallet Info', {
             'fields': ('id', 'user', 'balance', 'updated_at'),
         }),
+        ('Spending Limits', {
+            'description': 'Daily and monthly debit limits enforced on this wallet.',
+            'fields': ('daily_limit', 'monthly_limit'),
+        }),
         ('Statistics', {
             'fields': ('wallet_stats',),
         }),
     )
 
-    actions = ['credit_100', 'credit_500', 'credit_1000', 'zero_balance']
+    actions = ['credit_100', 'credit_500', 'credit_1000', 'zero_balance', 'reset_limits']
 
     # ── List columns ──────────────────────────────────────────────────────────
 
@@ -61,6 +66,14 @@ class WalletAdmin(admin.ModelAdmin):
         total = obj.user.transactions.filter(type='debit').aggregate(
             s=Sum('amount'))['s'] or Decimal('0')
         return format_html('<span style="color:#EF4444;">-₦{}</span>', f"{total:,.2f}")
+
+    @admin.display(description='Limits (Day / Month)')
+    def limits_display(self, obj):
+        return format_html(
+            '<span style="font-size:12px; color:#6B7280;">₦{} / ₦{}</span>',
+            f"{obj.daily_limit:,.0f}",
+            f"{obj.monthly_limit:,.0f}",
+        )
 
     @admin.display(description='Transactions')
     def view_transactions_link(self, obj):
@@ -142,6 +155,14 @@ class WalletAdmin(admin.ModelAdmin):
     @admin.action(description='💳 Credit ₦1,000 to selected wallets')
     def credit_1000(self, request, queryset):
         self._credit_wallets(request, queryset, Decimal('1000'), '₦1,000 admin top-up')
+
+    @admin.action(description='🔄 Reset spending limits to defaults (₦50k/day, ₦500k/month)')
+    def reset_limits(self, request, queryset):
+        count = queryset.update(
+            daily_limit=Decimal('50000.00'),
+            monthly_limit=Decimal('500000.00'),
+        )
+        self.message_user(request, f'{count} wallet(s) limits reset to default.')
 
     @admin.action(description='⚠️ Zero out balance of selected wallets')
     def zero_balance(self, request, queryset):
