@@ -37,6 +37,17 @@ class User(AbstractBaseUser, PermissionsMixin):
     last_name = models.CharField(max_length=50)
     avatar = models.ImageField(upload_to='avatars/', blank=True, null=True)
     transaction_pin = models.CharField(max_length=128, blank=True, null=True)
+
+    # ── KYC / Identity ────────────────────────────────────────────────────
+    bvn = models.CharField(max_length=11, blank=True, null=True, unique=True,
+                           verbose_name='BVN',
+                           help_text='11-digit Bank Verification Number')
+    nin = models.CharField(max_length=11, blank=True, null=True, unique=True,
+                           verbose_name='NIN',
+                           help_text='11-digit National Identification Number')
+    bvn_verified = models.BooleanField(default=False, verbose_name='BVN Verified')
+    nin_verified = models.BooleanField(default=False, verbose_name='NIN Verified')
+
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
     is_verified = models.BooleanField(default=False)

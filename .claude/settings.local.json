@@ -39,7 +39,10 @@
       "Bash(source env/Scripts/activate && python manage.py shell -c \"\nfrom django.urls import reverse\nurl = reverse\\('admin:vtu_siteconfiguration_change', args=[1]\\)\nprint\\('URL:', url\\)\n\" 2>&1)",
       "Bash(source env/Scripts/activate && python manage.py makemigrations vtu --name=\"add_dev_mode\" 2>&1)",
       "Bash(source env/Scripts/activate && python manage.py migrate vtu 2>&1)",
-      "Bash(source env/Scripts/activate && python manage.py check 2>&1)"
+      "Bash(source env/Scripts/activate && python manage.py check 2>&1)",
+      "Bash(cd /c/Users/Dell/Desktop/VTU/vtu && source env/Scripts/activate && python manage.py check 2>&1)",
+      "Bash(cd /c/Users/Dell/Desktop/VTU/vtu && source env/Scripts/activate && python manage.py makemigrations accounts --name=\"add_bvn_nin_fields\" 2>&1)",
+      "Bash(source env/Scripts/activate && python manage.py migrate 2>&1)"
     ]
   }
 }

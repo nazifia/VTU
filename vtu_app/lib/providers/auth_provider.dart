@@ -311,6 +311,78 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
+  /// Submit BVN and/or NIN. Returns null on success, error string on failure.
+  Future<String?> submitKyc({String? bvn, String? nin}) async {
+    try {
+      final result = await _api.submitKyc(bvn: bvn, nin: nin);
+      if (result['user'] != null) {
+        _user = UserModel.fromJson(result['user'] as Map<String, dynamic>);
+        notifyListeners();
+      }
+      return null;
+    } on DioException catch (e) {
+      return _parseError(e);
+    } catch (e) {
+      return e.toString();
+    }
+  }
+
+  /// Set or change the transaction PIN.
+  /// Returns null on success, or an error message string on failure.
+  Future<String?> setTransactionPin({
+    String? currentPin,
+    required String newPin,
+    required String confirmPin,
+  }) async {
+    try {
+      await _api.setTransactionPin(
+        currentPin: currentPin,
+        newPin: newPin,
+        confirmPin: confirmPin,
+      );
+      // Update local user so UI reflects pin is now set
+      if (_user != null) {
+        _user = _user!.copyWith(hasTransactionPin: true);
+        notifyListeners();
+      }
+      return null;
+    } on DioException catch (e) {
+      return _parseError(e);
+    } catch (e) {
+      return e.toString();
+    }
+  }
+
+  /// Update the user's wallet spending limits.
+  /// Returns null on success, or an error message string on failure.
+  Future<String?> updateWalletLimits({
+    double? dailyLimit,
+    double? monthlyLimit,
+  }) async {
+    try {
+      final result = await _api.updateWalletLimits(
+        dailyLimit: dailyLimit,
+        monthlyLimit: monthlyLimit,
+      );
+      if (_user != null) {
+        _user = _user!.copyWith(
+          dailyLimit: result['daily_limit'] is String
+              ? double.tryParse(result['daily_limit']) ?? _user!.dailyLimit
+              : (result['daily_limit'] as num?)?.toDouble() ?? _user!.dailyLimit,
+          monthlyLimit: result['monthly_limit'] is String
+              ? double.tryParse(result['monthly_limit']) ?? _user!.monthlyLimit
+              : (result['monthly_limit'] as num?)?.toDouble() ?? _user!.monthlyLimit,
+        );
+        notifyListeners();
+      }
+      return null;
+    } on DioException catch (e) {
+      return _parseError(e);
+    } catch (e) {
+      return e.toString();
+    }
+  }
+
   Future<void> setBiometricEnabled(bool value) async {
     _isBiometricEnabled = value;
     await _storage.setBiometricEnabled(value);

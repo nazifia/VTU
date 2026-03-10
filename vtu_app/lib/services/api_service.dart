@@ -165,6 +165,32 @@ class ApiService {
     return UserModel.fromJson(response.data as Map<String, dynamic>);
   }
 
+  /// Submit BVN and/or NIN for KYC verification.
+  Future<Map<String, dynamic>> submitKyc({String? bvn, String? nin}) async {
+    final data = <String, dynamic>{};
+    if (bvn != null) data['bvn'] = bvn;
+    if (nin != null) data['nin'] = nin;
+    final response = await _dio.post('/user/kyc/', data: data);
+    clearCacheFor('/user/profile/');
+    return response.data as Map<String, dynamic>;
+  }
+
+  /// Set or change the transaction PIN.
+  /// First-time: pass only [newPin] + [confirmPin].
+  /// Changing: pass [currentPin] + [newPin] + [confirmPin].
+  Future<void> setTransactionPin({
+    String? currentPin,
+    required String newPin,
+    required String confirmPin,
+  }) async {
+    final data = <String, dynamic>{
+      'new_pin': newPin,
+      'confirm_pin': confirmPin,
+    };
+    if (currentPin != null) data['current_pin'] = currentPin;
+    await _dio.post('/user/set-transaction-pin/', data: data);
+  }
+
   // ── Transaction endpoints ────────────────────────────────────────────────
   Future<List<TransactionModel>> getTransactions({int page = 1}) async {
     final data = await _cachedGet(
@@ -265,6 +291,24 @@ class ApiService {
       'account_number': accountNumber,
       'bank_code': bankCode,
     });
+    return response.data as Map<String, dynamic>;
+  }
+
+  // ── Wallet limits ────────────────────────────────────────────────────────
+  Future<Map<String, dynamic>> getWalletLimits() async {
+    final data = await _cachedGet('/wallet/limits/', ttl: _profileTtl);
+    return data as Map<String, dynamic>;
+  }
+
+  Future<Map<String, dynamic>> updateWalletLimits({
+    double? dailyLimit,
+    double? monthlyLimit,
+  }) async {
+    final body = <String, dynamic>{};
+    if (dailyLimit != null) body['daily_limit'] = dailyLimit;
+    if (monthlyLimit != null) body['monthly_limit'] = monthlyLimit;
+    final response = await _dio.patch('/wallet/limits/', data: body);
+    clearCacheFor('/wallet/limits/');
     return response.data as Map<String, dynamic>;
   }
 

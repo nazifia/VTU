@@ -188,8 +188,8 @@ class TransactionAdmin(admin.ModelAdmin):
             url = reverse('admin:wallet_wallet_change', args=[obj.user.wallet.pk])
             bal = obj.user.wallet.balance
             return format_html(
-                '<a href="{}">View Wallet</a> — Current balance: <strong>₦{:,.2f}</strong>',
-                url, bal,
+                '<a href="{}">View Wallet</a> — Current balance: <strong>₦{}</strong>',
+                url, f"{bal:,.2f}",
             )
         except Exception:
             return '—'

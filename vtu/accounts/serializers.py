@@ -12,17 +12,27 @@ class UserSerializer(serializers.ModelSerializer):
     full_name           = serializers.ReadOnlyField()
     profile_image       = serializers.SerializerMethodField()
     balance             = serializers.SerializerMethodField()
+    daily_limit         = serializers.SerializerMethodField()
+    monthly_limit       = serializers.SerializerMethodField()
     created_at          = serializers.SerializerMethodField()
     has_transaction_pin = serializers.ReadOnlyField()
+    bvn_linked          = serializers.SerializerMethodField()
+    nin_linked          = serializers.SerializerMethodField()
 
     class Meta:
         model = User
         fields = [
             'id', 'phone', 'email', 'first_name', 'last_name',
             'full_name', 'profile_image', 'is_verified', 'date_joined',
-            'balance', 'created_at', 'has_transaction_pin',
+            'balance', 'daily_limit', 'monthly_limit',
+            'created_at', 'has_transaction_pin',
+            'bvn_linked', 'bvn_verified', 'nin_linked', 'nin_verified',
         ]
-        read_only_fields = ['id', 'phone', 'is_verified', 'date_joined', 'balance', 'has_transaction_pin']
+        read_only_fields = [
+            'id', 'phone', 'is_verified', 'date_joined',
+            'balance', 'daily_limit', 'monthly_limit', 'has_transaction_pin',
+            'bvn_linked', 'bvn_verified', 'nin_linked', 'nin_verified',
+        ]
 
     def get_profile_image(self, obj):
         request = self.context.get('request')
@@ -35,6 +45,24 @@ class UserSerializer(serializers.ModelSerializer):
             return str(obj.wallet.balance)
         except Exception:
             return '0.00'
+
+    def get_daily_limit(self, obj):
+        try:
+            return str(obj.wallet.daily_limit)
+        except Exception:
+            return '50000.00'
+
+    def get_monthly_limit(self, obj):
+        try:
+            return str(obj.wallet.monthly_limit)
+        except Exception:
+            return '500000.00'
+
+    def get_bvn_linked(self, obj):
+        return bool(obj.bvn)
+
+    def get_nin_linked(self, obj):
+        return bool(obj.nin)
 
     def get_created_at(self, obj):
         if obj.date_joined:
@@ -138,4 +166,57 @@ class SetTransactionPinSerializer(serializers.Serializer):
     def validate(self, data):
         if data['new_pin'] != data['confirm_pin']:
             raise serializers.ValidationError({'confirm_pin': 'PINs do not match.'})
+        return data
+
+
+BVN_RE = re.compile(r'^\d{11}$')
+NIN_RE = re.compile(r'^\d{11}$')
+
+
+class KycSerializer(serializers.Serializer):
+    """Submit BVN and/or NIN for linking to the user's account."""
+    bvn = serializers.CharField(max_length=11, required=False, allow_blank=True)
+    nin = serializers.CharField(max_length=11, required=False, allow_blank=True)
+
+    def validate_bvn(self, value):
+        value = value.strip()
+        if not value:
+            return value
+        if not BVN_RE.match(value):
+            raise serializers.ValidationError('BVN must be exactly 11 digits.')
+        return value
+
+    def validate_nin(self, value):
+        value = value.strip()
+        if not value:
+            return value
+        if not NIN_RE.match(value):
+            raise serializers.ValidationError('NIN must be exactly 11 digits.')
+        return value
+
+    def validate(self, data):
+        bvn = data.get('bvn', '')
+        nin = data.get('nin', '')
+        if not bvn and not nin:
+            raise serializers.ValidationError(
+                'Provide at least one of BVN or NIN.'
+            )
+        # Duplicate check — exclude the current user
+        request = self.context.get('request')
+        if bvn:
+            qs = User.objects.filter(bvn=bvn)
+            if request and request.user.pk:
+                qs = qs.exclude(pk=request.user.pk)
+            if qs.exists():
+                raise serializers.ValidationError(
+                    {'bvn': 'This BVN is already linked to another account.'}
+                )
+        if nin:
+            qs = User.objects.filter(nin=nin)
+            if request and request.user.pk:
+                qs = qs.exclude(pk=request.user.pk)
+            if qs.exists():
+                raise serializers.ValidationError(
+                    {'nin': 'This NIN is already linked to another account.'}
+                )
         return data

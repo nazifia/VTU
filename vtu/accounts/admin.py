@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
-from django.utils.html import format_html
+from django.utils.html import format_html, mark_safe
 from django.urls import reverse
 from django.db.models import Sum, Count, Q
 from django.utils import timezone
@@ -42,12 +42,13 @@ class UserAdmin(BaseUserAdmin):
         'wallet_balance_display',
         'is_verified', 'is_active', 'is_staff',
         'txn_pin_set_display',
+        'kyc_status_display',
         'transaction_count_display',
         'date_joined',
     ]
     list_filter = ['is_verified', 'is_staff', 'is_active', 'date_joined']
     search_fields = ['phone', 'first_name', 'last_name', 'email']
-    readonly_fields = ['id', 'date_joined', 'wallet_balance_display', 'transaction_summary']
+    readonly_fields = ['id', 'date_joined', 'wallet_balance_display', 'transaction_summary', 'bvn', 'nin']
     inlines = [WalletInline, TransactionInline]
 
     fieldsets = (
@@ -59,6 +60,10 @@ class UserAdmin(BaseUserAdmin):
         }),
         ('Status', {
             'fields': ('is_active', 'is_verified', 'is_staff', 'is_superuser'),
+        }),
+        ('KYC / Identity', {
+            'description': 'BVN and NIN linked by the user. Tick *_verified to manually approve.',
+            'fields': ('bvn', 'bvn_verified', 'nin', 'nin_verified'),
         }),
         ('Permissions', {
             'classes': ('collapse',),
@@ -83,15 +88,24 @@ class UserAdmin(BaseUserAdmin):
         }),
     )
 
-    actions = ['verify_users', 'deactivate_users', 'activate_users']
+    actions = ['verify_users', 'deactivate_users', 'activate_users', 'approve_kyc', 'revoke_kyc']
 
     # ── Custom list columns ──────────────────────────────────────────────────
+
+    @admin.display(description='KYC')
+    def kyc_status_display(self, obj):
+        bvn_icon = '✅' if obj.bvn_verified else ('⏳' if obj.bvn else '—')
+        nin_icon = '✅' if obj.nin_verified else ('⏳' if obj.nin else '—')
+        return format_html(
+            '<span title="BVN">B:{}</span> <span title="NIN">N:{}</span>',
+            bvn_icon, nin_icon,
+        )
 
     @admin.display(description='Txn PIN')
     def txn_pin_set_display(self, obj):
         if obj.has_transaction_pin:
-            return format_html('<span style="color:#10B981; font-weight:700;">&#10003; Set</span>')
-        return format_html('<span style="color:#EF4444;">&#10007; Not set</span>')
+            return mark_safe('<span style="color:#10B981; font-weight:700;">&#10003; Set</span>')
+        return mark_safe('<span style="color:#EF4444;">&#10007; Not set</span>')
 
     @admin.display(description='Wallet Balance', ordering='wallet__balance')
     def wallet_balance_display(self, obj):
@@ -103,7 +117,7 @@ class UserAdmin(BaseUserAdmin):
                 color, f"{bal:,.2f}",
             )
         except Exception:
-            return format_html('<span style="color:#EF4444;">No wallet</span>')
+            return mark_safe('<span style="color:#EF4444;">No wallet</span>')
 
     @admin.display(description='Transactions')
     def transaction_count_display(self, obj):
@@ -139,6 +153,17 @@ class UserAdmin(BaseUserAdmin):
         )
 
     # ── Bulk actions ─────────────────────────────────────────────────────────
+
+    @admin.action(description='🪪 Approve KYC (BVN + NIN) for selected users')
+    def approve_kyc(self, request, queryset):
+        updated = queryset.filter(bvn__isnull=False).update(bvn_verified=True)
+        updated += queryset.filter(nin__isnull=False).update(nin_verified=True)
+        self.message_user(request, f'KYC approved for {queryset.count()} user(s).')
+
+    @admin.action(description='❌ Revoke KYC for selected users')
+    def revoke_kyc(self, request, queryset):
+        queryset.update(bvn_verified=False, nin_verified=False)
+        self.message_user(request, f'KYC revoked for {queryset.count()} user(s).')
 
     @admin.action(description='✅ Mark selected users as verified')
     def verify_users(self, request, queryset):

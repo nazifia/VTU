@@ -1,5 +1,5 @@
 from django.contrib import admin, messages
-from django.utils.html import format_html
+from django.utils.html import format_html, mark_safe
 from .models import SiteConfiguration
 
 
@@ -50,11 +50,11 @@ class SiteConfigurationAdmin(admin.ModelAdmin):
     @admin.display(description='Mode')
     def mode_badge(self, obj):
         if obj.dev_mode:
-            return format_html(
+            return mark_safe(
                 '<span style="background:#F59E0B;color:#fff;padding:2px 10px;'
                 'border-radius:12px;font-weight:700;font-size:12px;">🔧 DEV</span>'
             )
-        return format_html(
+        return mark_safe(
             '<span style="background:#10B981;color:#fff;padding:2px 10px;'
             'border-radius:12px;font-weight:700;font-size:12px;">🚀 PROD</span>'
         )
@@ -62,8 +62,8 @@ class SiteConfigurationAdmin(admin.ModelAdmin):
     @admin.display(description='OTP in response')
     def otp_in_response_status(self, obj):
         if obj.show_otp_in_response:
-            return format_html('<span style="color:#F59E0B;font-weight:700;">⚠ ON</span>')
-        return format_html('<span style="color:#10B981;font-weight:700;">✓ OFF</span>')
+            return mark_safe('<span style="color:#F59E0B;font-weight:700;">⚠ ON</span>')
+        return mark_safe('<span style="color:#10B981;font-weight:700;">✓ OFF</span>')
 
     @admin.display(description='Fixed OTP')
     def fixed_otp_status(self, obj):
@@ -72,13 +72,13 @@ class SiteConfigurationAdmin(admin.ModelAdmin):
                 '<span style="color:#F59E0B;font-weight:700;">⚠ {} (fixed)</span>',
                 obj.fixed_otp_value,
             )
-        return format_html('<span style="color:#10B981;font-weight:700;">✓ Random</span>')
+        return mark_safe('<span style="color:#10B981;font-weight:700;">✓ Random</span>')
 
     @admin.display(description='Maintenance')
     def maintenance_status(self, obj):
         if obj.maintenance_mode:
-            return format_html('<span style="color:#EF4444;font-weight:700;">🔴 ON</span>')
-        return format_html('<span style="color:#10B981;font-weight:700;">🟢 OFF</span>')
+            return mark_safe('<span style="color:#EF4444;font-weight:700;">🔴 ON</span>')
+        return mark_safe('<span style="color:#10B981;font-weight:700;">🟢 OFF</span>')
 
     # ── Quick actions ─────────────────────────────────────────────────────────
 

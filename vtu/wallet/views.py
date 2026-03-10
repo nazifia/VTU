@@ -9,7 +9,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
 from .models import Wallet
-from .serializers import WalletSerializer, FundWalletSerializer
+from .serializers import WalletSerializer, FundWalletSerializer, WalletLimitsSerializer
 from .utils import check_maintenance_mode
 from transactions.models import Transaction
 
@@ -74,6 +74,25 @@ class FundWalletView(APIView):
             'balance': str(wallet.balance),
             'message': 'Wallet funded successfully.',
         })
+
+
+class WalletLimitsView(APIView):
+    """
+    GET  → returns the user's current daily/monthly limits.
+    PATCH → lets the user self-update limits (capped by MAX values in the serializer).
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        wallet = request.user.wallet
+        return Response(WalletLimitsSerializer(wallet).data)
+
+    def patch(self, request):
+        wallet = request.user.wallet
+        serializer = WalletLimitsSerializer(wallet, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(WalletLimitsSerializer(wallet).data)
 
 
 class VirtualAccountsView(APIView):
