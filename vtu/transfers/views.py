@@ -9,7 +9,7 @@ from rest_framework.response import Response
 from rest_framework import serializers, status
 from django.core.exceptions import ValidationError
 from transactions.models import Transaction
-from wallet.utils import check_spending_limits, verify_transaction_pin
+from wallet.utils import check_spending_limits, verify_transaction_pin, check_maintenance_mode
 
 
 # ── Serializers ───────────────────────────────────────────────────────────────
@@ -93,6 +93,11 @@ class BankTransferView(APIView):
 
     @transaction.atomic
     def post(self, request):
+        try:
+            check_maintenance_mode()
+        except ValidationError as e:
+            return Response({'detail': e.message}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+
         s = BankTransferSerializer(data=request.data)
         s.is_valid(raise_exception=True)
         d = s.validated_data

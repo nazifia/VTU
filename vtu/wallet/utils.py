@@ -5,6 +5,17 @@ from django.db.models import Sum
 from transactions.models import Transaction
 
 
+def check_maintenance_mode():
+    """
+    Raise ValidationError if maintenance mode is enabled in SiteConfiguration.
+    Call this at the start of every financial transaction view.
+    """
+    from vtu.models import SiteConfiguration
+    config = SiteConfiguration.get()
+    if config.maintenance_mode:
+        raise ValidationError(config.maintenance_message)
+
+
 def verify_transaction_pin(user, raw_pin: str):
     """
     Raise ValidationError if the supplied PIN does not match the user's

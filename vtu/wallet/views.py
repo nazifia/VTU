@@ -10,6 +10,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from .models import Wallet
 from .serializers import WalletSerializer, FundWalletSerializer
+from .utils import check_maintenance_mode
 from transactions.models import Transaction
 
 logger = logging.getLogger(__name__)
@@ -34,6 +35,12 @@ class FundWalletView(APIView):
 
     @transaction.atomic
     def post(self, request):
+        from django.core.exceptions import ValidationError
+        try:
+            check_maintenance_mode()
+        except ValidationError as e:
+            return Response({'detail': e.message}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+
         serializer = FundWalletSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         amount = serializer.validated_data['amount']

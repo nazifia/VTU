@@ -33,9 +33,10 @@ class OTPRateThrottle(AnonRateThrottle):
 
 
 def _generate_otp():
-    if getattr(settings, "DEBUG", False):
-        return "123456"
-    # secrets.randbelow is cryptographically secure (uses os.urandom)
+    from vtu.models import SiteConfiguration
+    config = SiteConfiguration.get()
+    if config.use_fixed_otp:
+        return config.fixed_otp_value
     return f"{secrets.randbelow(900000) + 100000}"
 
 
@@ -70,9 +71,10 @@ class RegisterView(APIView):
         code = _generate_otp()
         OTP.objects.create(phone=data["phone"], code=code, purpose="register")
 
-        # In production: send via SMS gateway. Only expose OTP in debug mode.
+        # In production: send via SMS gateway. Only expose OTP when toggled on.
+        from vtu.models import SiteConfiguration
         response_data = {"message": f"OTP sent to {data['phone']}"}
-        if settings.DEBUG:
+        if SiteConfiguration.get().show_otp_in_response:
             response_data["otp"] = code
         return Response(response_data, status=status.HTTP_201_CREATED)
 
@@ -116,9 +118,10 @@ class SendOTPView(APIView):
         code = _generate_otp()
         OTP.objects.create(phone=phone, code=code, purpose="register")
 
-        # In production: send via SMS gateway. Only expose OTP in debug mode.
+        # In production: send via SMS gateway. Only expose OTP when toggled on.
+        from vtu.models import SiteConfiguration
         response_data = {"message": "OTP sent"}
-        if settings.DEBUG:
+        if SiteConfiguration.get().show_otp_in_response:
             response_data["otp"] = code
         return Response(response_data)
 

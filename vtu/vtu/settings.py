@@ -13,9 +13,9 @@ SECRET_KEY = os.environ.get(
     'SECRET_KEY',
     'django-insecure-change-me-in-production-use-env-var'
 )
-# Default to False so production deployments are safe without explicit config.
-# Set DEBUG=True in your local .env for development.
-DEBUG = os.environ.get('DEBUG', 'False') == 'True'
+# Defaults to True for local development.
+# Set DEBUG=False (and a strong SECRET_KEY) in production.
+DEBUG = os.environ.get('DEBUG', 'True') == 'True'
 
 if not DEBUG and SECRET_KEY.startswith('django-insecure-'):
     raise RuntimeError(
