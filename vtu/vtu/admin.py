@@ -1,4 +1,4 @@
-from django.contrib import admin
+from django.contrib import admin, messages
 from django.utils.html import format_html
 from .models import SiteConfiguration
 
@@ -7,19 +7,25 @@ from .models import SiteConfiguration
 class SiteConfigurationAdmin(admin.ModelAdmin):
     """
     Singleton admin — shows exactly one row and prevents add / delete.
-    All flags are editable inline on the detail page.
+    Flip 'Development mode' OFF to switch the entire app to production behaviour.
     """
 
     fieldsets = (
-        ('OTP / Authentication (Testing)', {
+        ('🔧 Mode', {
             'description': (
-                'Control how OTPs are generated and exposed. '
-                'Disable these before going live.'
+                '<strong>Development mode ON</strong> → OTP shown in API responses, '
+                'fixed OTP active, CORS open. '
+                '<br><strong>Development mode OFF</strong> → production behaviour; '
+                'OTP settings below are locked automatically.'
             ),
+            'fields': ('dev_mode',),
+        }),
+        ('OTP / Authentication', {
+            'description': 'These are set automatically when you toggle Dev Mode. You can also adjust them individually.',
             'fields': ('show_otp_in_response', 'use_fixed_otp', 'fixed_otp_value'),
         }),
         ('Maintenance', {
-            'description': 'Take the payment features offline without a deployment.',
+            'description': 'Take payment features offline without a deployment.',
             'fields': ('maintenance_mode', 'maintenance_message'),
         }),
     )
@@ -27,26 +33,43 @@ class SiteConfigurationAdmin(admin.ModelAdmin):
     # ── Status summary in the change-list ─────────────────────────────────────
     list_display = [
         'site_name',
+        'mode_badge',
         'otp_in_response_status',
         'fixed_otp_status',
         'maintenance_status',
     ]
 
+    actions = ['switch_to_dev_mode', 'switch_to_production_mode', 'toggle_maintenance']
+
+    # ── Column badges ─────────────────────────────────────────────────────────
+
     @admin.display(description='Configuration')
     def site_name(self, obj):
         return 'Global Settings'
 
+    @admin.display(description='Mode')
+    def mode_badge(self, obj):
+        if obj.dev_mode:
+            return format_html(
+                '<span style="background:#F59E0B;color:#fff;padding:2px 10px;'
+                'border-radius:12px;font-weight:700;font-size:12px;">🔧 DEV</span>'
+            )
+        return format_html(
+            '<span style="background:#10B981;color:#fff;padding:2px 10px;'
+            'border-radius:12px;font-weight:700;font-size:12px;">🚀 PROD</span>'
+        )
+
     @admin.display(description='OTP in response')
     def otp_in_response_status(self, obj):
         if obj.show_otp_in_response:
-            return format_html('<span style="color:#F59E0B;font-weight:700;">⚠ ON (dev only)</span>')
+            return format_html('<span style="color:#F59E0B;font-weight:700;">⚠ ON</span>')
         return format_html('<span style="color:#10B981;font-weight:700;">✓ OFF</span>')
 
     @admin.display(description='Fixed OTP')
     def fixed_otp_status(self, obj):
         if obj.use_fixed_otp:
             return format_html(
-                '<span style="color:#F59E0B;font-weight:700;">⚠ {} (dev only)</span>',
+                '<span style="color:#F59E0B;font-weight:700;">⚠ {} (fixed)</span>',
                 obj.fixed_otp_value,
             )
         return format_html('<span style="color:#10B981;font-weight:700;">✓ Random</span>')
@@ -56,6 +79,31 @@ class SiteConfigurationAdmin(admin.ModelAdmin):
         if obj.maintenance_mode:
             return format_html('<span style="color:#EF4444;font-weight:700;">🔴 ON</span>')
         return format_html('<span style="color:#10B981;font-weight:700;">🟢 OFF</span>')
+
+    # ── Quick actions ─────────────────────────────────────────────────────────
+
+    @admin.action(description='🔧 Switch to Development mode (show OTP, fixed OTP ON)')
+    def switch_to_dev_mode(self, request, queryset):
+        cfg = SiteConfiguration.get()
+        cfg.dev_mode = True
+        cfg.save()
+        self.message_user(request, '✅ Switched to Development mode. OTP shown in responses, fixed OTP active.', messages.SUCCESS)
+
+    @admin.action(description='🚀 Switch to Production mode (hide OTP, random OTPs)')
+    def switch_to_production_mode(self, request, queryset):
+        cfg = SiteConfiguration.get()
+        cfg.dev_mode = False
+        cfg.save()
+        self.message_user(request, '✅ Switched to Production mode. OTP hidden, random OTPs enabled.', messages.SUCCESS)
+
+    @admin.action(description='🔴 Toggle maintenance mode ON/OFF')
+    def toggle_maintenance(self, request, queryset):
+        cfg = SiteConfiguration.get()
+        cfg.maintenance_mode = not cfg.maintenance_mode
+        # bypass the dev_mode auto-sync by calling super().save() directly
+        SiteConfiguration.objects.filter(pk=1).update(maintenance_mode=cfg.maintenance_mode)
+        state = 'ON' if cfg.maintenance_mode else 'OFF'
+        self.message_user(request, f'🔴 Maintenance mode is now {state}.', messages.WARNING)
 
     # ── Singleton: no add, no delete ──────────────────────────────────────────
 

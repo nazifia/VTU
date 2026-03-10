@@ -31,7 +31,15 @@
       "Bash(cd \"C:\\\\Users\\\\Dell\\\\Desktop\\\\VTU\\\\vtu\" && DEBUG=True python manage.py migrate 2>&1)",
       "Read(//c/Users/Dell/AppData/Local/Pub/Cache/hosted/pub.dev/**)",
       "Read(//c/Users/Dell/AppData/Local/Pub/Cache/**)",
-      "Bash(grep -n \"displayName\\\\|String\" /c/Users/Dell/AppData/Local/Pub/Cache/hosted/pub.dev/flutter_contacts-2.0.0/lib/models/contact/contact.dart | head -20\ngrep -n \"request\\\\|Future<bool>\" /c/Users/Dell/AppData/Local/Pub/Cache/hosted/pub.dev/flutter_contacts-2.0.0/lib/api/permissions_api.dart | head -20)"
+      "Bash(grep -n \"displayName\\\\|String\" /c/Users/Dell/AppData/Local/Pub/Cache/hosted/pub.dev/flutter_contacts-2.0.0/lib/models/contact/contact.dart | head -20\ngrep -n \"request\\\\|Future<bool>\" /c/Users/Dell/AppData/Local/Pub/Cache/hosted/pub.dev/flutter_contacts-2.0.0/lib/api/permissions_api.dart | head -20)",
+      "Bash(find /c/Users/Dell/Desktop/VTU/vtu -name \"admin.py\" | xargs grep -l \"SiteConfiguration\\\\|site_config\" 2>/dev/null\nfind /c/Users/Dell/Desktop/VTU/vtu -name \"models.py\" | xargs grep -l \"SiteConfiguration\" 2>/dev/null)",
+      "Bash(cd /c/Users/Dell/Desktop/VTU/vtu && source env/Scripts/activate && python manage.py showmigrations vtu 2>&1)",
+      "Bash(source env/Scripts/activate && python manage.py shell -c \"from vtu.models import SiteConfiguration; print\\(SiteConfiguration.objects.count\\(\\)\\)\" 2>&1)",
+      "Bash(source env/Scripts/activate && python manage.py shell -c \"\nfrom django.contrib.admin.sites import site\nprint\\([k for k in site._registry.keys\\(\\)]\\)\n\" 2>&1 | grep -i \"site\\\\|config\\\\|vtu\")",
+      "Bash(source env/Scripts/activate && python manage.py shell -c \"\nfrom django.urls import reverse\nurl = reverse\\('admin:vtu_siteconfiguration_change', args=[1]\\)\nprint\\('URL:', url\\)\n\" 2>&1)",
+      "Bash(source env/Scripts/activate && python manage.py makemigrations vtu --name=\"add_dev_mode\" 2>&1)",
+      "Bash(source env/Scripts/activate && python manage.py migrate vtu 2>&1)",
+      "Bash(source env/Scripts/activate && python manage.py check 2>&1)"
     ]
   }
 }
