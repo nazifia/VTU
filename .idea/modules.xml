@@ -3,6 +3,8 @@
   <component name="ProjectModuleManager">
     <modules>
       <module fileurl="file://$PROJECT_DIR$/.idea/VTU.iml" filepath="$PROJECT_DIR$/.idea/VTU.iml" />
+      <module fileurl="file://$PROJECT_DIR$/vtu_app/vtu_app.iml" filepath="$PROJECT_DIR$/vtu_app/vtu_app.iml" />
+      <module fileurl="file://$PROJECT_DIR$/vtu_app/android/vtu_app_android.iml" filepath="$PROJECT_DIR$/vtu_app/android/vtu_app_android.iml" />
     </modules>
   </component>
 </project>

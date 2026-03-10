@@ -1,0 +1,7 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="Npay (Backend + App)" type="CompoundRunConfigurationType">
+    <toRun name="Django Backend" type="ShConfigurationType" />
+    <toRun name="main.dart" type="FlutterRunConfigurationType" />
+    <method v="2" />
+  </configuration>
+</component>

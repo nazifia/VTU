@@ -24,8 +24,8 @@ class SpendingAnalyticsView(generics.GenericAPIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request, *args, **kwargs):
-        from decimal import Decimal
         from django.utils import timezone
+        from django.db.models import Sum
         now = timezone.now()
         start_of_today = now.replace(hour=0, minute=0, second=0, microsecond=0)
         start_of_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
@@ -34,18 +34,23 @@ class SpendingAnalyticsView(generics.GenericAPIView):
             user=request.user, type='debit', status='success'
         )
 
-        spent_today = sum(t.amount for t in debits.filter(created_at__gte=start_of_today))
-        spent_month = sum(t.amount for t in debits.filter(created_at__gte=start_of_month))
+        spent_today = debits.filter(created_at__gte=start_of_today).aggregate(
+            total=Sum('amount')
+        )['total'] or 0
 
-        # Category breakdown for the month
-        breakdown = {}
-        for t in debits.filter(created_at__gte=start_of_month):
-            breakdown[t.category] = breakdown.get(t.category, Decimal('0.00')) + t.amount
+        spent_month = debits.filter(created_at__gte=start_of_month).aggregate(
+            total=Sum('amount')
+        )['total'] or 0
+
+        breakdown_qs = debits.filter(created_at__gte=start_of_month).values(
+            'category'
+        ).annotate(total=Sum('amount'))
+        breakdown = {row['category']: str(row['total']) for row in breakdown_qs}
 
         return Response({
-            'spent_today': spent_today,
-            'spent_this_month': spent_month,
-            'daily_limit': request.user.wallet.daily_limit,
-            'monthly_limit': request.user.wallet.monthly_limit,
-            'category_breakdown': {k: v for k, v in breakdown.items()}
+            'spent_today': str(spent_today),
+            'spent_this_month': str(spent_month),
+            'daily_limit': str(request.user.wallet.daily_limit),
+            'monthly_limit': str(request.user.wallet.monthly_limit),
+            'category_breakdown': breakdown,
         })

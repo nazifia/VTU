@@ -7,19 +7,20 @@ User = get_user_model()
 
 class UserSerializer(serializers.ModelSerializer):
     full_name = serializers.ReadOnlyField()
-    avatar_url = serializers.SerializerMethodField()
+    profile_image = serializers.SerializerMethodField()
     balance = serializers.SerializerMethodField()
+    created_at = serializers.SerializerMethodField()
 
     class Meta:
         model = User
         fields = [
             'id', 'phone', 'email', 'first_name', 'last_name',
-            'full_name', 'avatar_url', 'is_verified', 'date_joined',
-            'balance',
+            'full_name', 'profile_image', 'is_verified', 'date_joined',
+            'balance', 'created_at',
         ]
         read_only_fields = ['id', 'phone', 'is_verified', 'date_joined', 'balance']
 
-    def get_avatar_url(self, obj):
+    def get_profile_image(self, obj):
         request = self.context.get('request')
         if obj.avatar and request:
             return request.build_absolute_uri(obj.avatar.url)
@@ -30,6 +31,11 @@ class UserSerializer(serializers.ModelSerializer):
             return str(obj.wallet.balance)
         except Exception:
             return '0.00'
+
+    def get_created_at(self, obj):
+        if obj.date_joined:
+            return obj.date_joined.isoformat()
+        return None
 
 
 def normalize_phone(value):

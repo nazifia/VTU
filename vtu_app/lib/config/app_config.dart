@@ -9,7 +9,7 @@ class AppConfig {
   /// - Web / Windows desktop → http://localhost:8000/api/v1
   /// - Android emulator      → http://10.0.2.2:8000/api/v1   (emulator loopback)
   /// - iOS simulator         → http://127.0.0.1:8000/api/v1
-  /// - Physical device       → must pass --dart-define=API_BASE_URL=http://<LAN-IP>:8000/api/v1
+  /// - Physical device       → must pass --dart-define=API_BASE_URL=http://`<LAN-IP>`:8000/api/v1
   static String get apiBaseUrl {
     if (_envApiBaseUrl.isNotEmpty) return _envApiBaseUrl;
     if (kIsWeb) return 'http://localhost:8000/api/v1';

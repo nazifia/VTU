@@ -19,14 +19,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
   bool _balanceVisible = true;
 
   @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<AuthProvider>().loadTransactions();
-    });
-  }
-
-  @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
     final user = auth.user;

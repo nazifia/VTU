@@ -45,6 +45,14 @@ class Transaction(models.Model):
     class Meta:
         db_table = 'transactions_transaction'
         ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['status']),
+            models.Index(fields=['category']),
+            models.Index(fields=['created_at']),
+            models.Index(fields=['user', 'status']),
+            models.Index(fields=['user', 'category']),
+            models.Index(fields=['user', 'status', 'category']),
+        ]
 
     def __str__(self):
         return f'{self.user.phone} — {self.category} — ₦{self.amount} ({self.status})'

@@ -83,6 +83,7 @@ class _NpayAppState extends State<NpayApp> {
     final auth = context.read<AuthProvider>();
     if (auth.isAuthenticated) {
       auth.logout();
+      Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
     }
   }
 

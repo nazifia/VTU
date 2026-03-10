@@ -1,5 +1,10 @@
 <project version="4">
-  <component name="ProjectRootManager" version="2">
+  <component name="ProjectRootManager" version="2" project-jdk-name="Android API 36 Platform" project-jdk-type="Android SDK">
     <output url="file://$PROJECT_DIR$/out" />
+  </component>
+  <component name="DartProjectComponent">
+    <usedLibraries>
+      <item value="Dart SDK" />
+    </usedLibraries>
   </component>
 </project>

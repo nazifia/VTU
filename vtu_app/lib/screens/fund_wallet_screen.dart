@@ -523,7 +523,7 @@ class _CardTabState extends State<_CardTab> {
                       const Spacer(),
                       ValueListenableBuilder(
                         valueListenable: _cardNum,
-                        builder: (_, __, ___) {
+                        builder: (_, _, _) {
                           final raw = _cardNum.text.replaceAll(' ', '');
                           final formatted = List.generate(4, (i) {
                             final chunk = raw.substring(
@@ -545,7 +545,7 @@ class _CardTabState extends State<_CardTab> {
                         children: [
                           ValueListenableBuilder(
                             valueListenable: _cardName,
-                            builder: (_, __, ___) => Text(
+                            builder: (_, _, _) => Text(
                               _cardName.text.isEmpty
                                   ? 'CARDHOLDER NAME'
                                   : _cardName.text.toUpperCase(),
@@ -555,7 +555,7 @@ class _CardTabState extends State<_CardTab> {
                           ),
                           ValueListenableBuilder(
                             valueListenable: _expiry,
-                            builder: (_, __, ___) => Text(
+                            builder: (_, _, _) => Text(
                               _expiry.text.isEmpty ? 'MM/YY' : _expiry.text,
                               style: const TextStyle(
                                   color: Colors.white70, fontSize: 12),

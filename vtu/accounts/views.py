@@ -82,8 +82,6 @@ class LoginView(APIView):
 
         user = authenticate(request, username=phone, password=pin)
 
-        print(f"Login attempt: phone='{phone}', pin='{pin}'")
-        print(f"User found: {user}")
 
         if user is None:
             return Response(

@@ -3,7 +3,28 @@
     "allow": [
       "Bash(git add:*)",
       "Bash(git commit:*)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Bash(python:*)",
+      "Bash(flutter devices:*)",
+      "Bash(jobs:*)",
+      "Bash(timeout 120 flutter run:*)",
+      "Bash(flutter run:*)",
+      "Bash(flutter build:*)",
+      "Bash(flutter pub:*)",
+      "Bash(flutter doctor:*)",
+      "Bash(flutter analyze:*)",
+      "Bash(cat:*)",
+      "Bash(mkdir:*)",
+      "Bash(cp:*)",
+      "Bash(echo exit: $?:*)",
+      "mcp__ide__getDiagnostics",
+      "Bash(where powershell.exe 2>&1 && where cmd.exe 2>&1)",
+      "Bash(adb kill-server:*)",
+      "Bash(\"/c/Users/Dell/AppData/Local/Android/sdk/platform-tools/adb.exe\" kill-server:*)",
+      "Bash(\"/c/Users/Dell/AppData/Local/Android/sdk/platform-tools/adb.exe\" -s emulator-5554 wait-for-device && \"/c/Users/Dell/AppData/Local/Android/sdk/platform-tools/adb.exe\" -s emulator-5554 shell getprop sys.boot_completed 2>&1)",
+      "Bash(\"/c/Users/Dell/AppData/Local/Android/sdk/platform-tools/adb.exe\" devices:*)",
+      "Bash(\"/c/Users/Dell/AppData/Local/Android/sdk/platform-tools/adb.exe\" -s emulator-5554 shell getprop sys.boot_completed 2>&1)",
+      "Bash(\"/c/Users/Dell/AppData/Local/Android/sdk/platform-tools/adb.exe\" -s emulator-5554 shell getprop init.svc.bootanim 2>&1)"
     ]
   }
 }

@@ -114,7 +114,7 @@ class ApiService {
         'pin': pin,
         'first_name': firstName,
         'last_name': lastName,
-        if (email != null) 'email': email,
+        'email': ?email,
       },
     );
     return response.data as Map<String, dynamic>;
@@ -212,7 +212,7 @@ class ApiService {
       'provider': provider,
       'account_number': accountNumber,
       'amount': amount,
-      if (metadata != null) 'metadata': metadata,
+      'metadata': ?metadata,
     });
     return response.data as Map<String, dynamic>;
   }
@@ -228,7 +228,7 @@ class ApiService {
       'account_number': accountNumber,
       'bank_code': bankCode,
       'amount': amount,
-      if (narration != null) 'narration': narration,
+      'narration': ?narration,
     });
     return response.data as Map<String, dynamic>;
   }

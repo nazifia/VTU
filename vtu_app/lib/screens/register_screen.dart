@@ -377,7 +377,7 @@ class _OtpScreenState extends State<OtpScreen> {
     await auth.sendOtp(widget.phone);
     if (mounted) {
       _startCountdown();
-      for (final c in _controllers) c.clear();
+      for (final c in _controllers) { c.clear(); }
       _focusNodes.first.requestFocus();
       if (widget.devOtp != null) {
         ScaffoldMessenger.of(context).showSnackBar(

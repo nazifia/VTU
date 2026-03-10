@@ -257,6 +257,31 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
+  Future<bool> payBill({
+    required String billType,
+    required String provider,
+    required String accountNumber,
+    required double amount,
+    Map<String, dynamic>? metadata,
+  }) async {
+    try {
+      await _api.payBill(
+        billType: billType,
+        provider: provider,
+        accountNumber: accountNumber,
+        amount: amount,
+        metadata: metadata,
+      );
+      await loadTransactions();
+      await refreshProfile();
+      return true;
+    } on DioException catch (e) {
+      _errorMessage = _parseError(e);
+      notifyListeners();
+      return false;
+    }
+  }
+
   Future<bool> fundWallet({required double amount}) async {
     _errorMessage = null;
     try {
@@ -309,9 +334,9 @@ class AuthProvider with ChangeNotifier {
     if (_user == null) return;
     try {
       final updated = await _api.updateProfile({
-        if (firstName != null) 'first_name': firstName,
-        if (lastName != null) 'last_name': lastName,
-        if (email != null) 'email': email,
+        'first_name': ?firstName,
+        'last_name': ?lastName,
+        'email': ?email,
       });
       _user = updated;
       notifyListeners();

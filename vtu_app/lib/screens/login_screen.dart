@@ -99,8 +99,9 @@ class _LoginScreenState extends State<LoginScreen>
   String? _validatePhone(String? v) {
     if (v == null || v.isEmpty) return 'Phone number is required';
     final cleaned = v.replaceAll(RegExp(r'[\s\-]'), '');
-    if (!RegExp(r'^[789]\d{9}$').hasMatch(cleaned) &&
-        !RegExp(r'^\+234\d{10}$').hasMatch(cleaned)) {
+    if (!RegExp(r'^0[789]\d{9}$').hasMatch(cleaned) &&
+        !RegExp(r'^[789]\d{9}$').hasMatch(cleaned) &&
+        !RegExp(r'^\+234[789]\d{9}$').hasMatch(cleaned)) {
       return 'Enter a valid Nigerian phone number';
     }
     return null;
@@ -174,12 +175,12 @@ class _LoginScreenState extends State<LoginScreen>
                       CustomTextField(
                         controller: _phoneController,
                         label: 'Phone Number',
-                        hint: '8012345678',
+                        hint: '08012345678',
                         prefixIcon: Icons.phone_android_rounded,
                         keyboardType: TextInputType.phone,
                         inputFormatters: [
                           FilteringTextInputFormatter.digitsOnly,
-                          LengthLimitingTextInputFormatter(11),
+                          LengthLimitingTextInputFormatter(14),
                         ],
                         validator: _validatePhone,
                         textInputAction: TextInputAction.next,

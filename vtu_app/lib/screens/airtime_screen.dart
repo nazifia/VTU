@@ -205,7 +205,7 @@ class _AirtimeScreenState extends State<AirtimeScreen> {
                                         backgroundColor:
                                             color.withValues(alpha: 0.2),
                                         child: Text(
-                                          (name as String)[0],
+                                          name[0],
                                           style: TextStyle(
                                             color: color,
                                             fontWeight: FontWeight.w800,

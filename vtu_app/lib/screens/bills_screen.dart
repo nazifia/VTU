@@ -122,11 +122,11 @@ class _ElectricityTabState extends State<_ElectricityTab> {
     }
     setState(() => _loading = true);
     final auth = context.read<AuthProvider>();
-    final success = await auth.bankTransfer(
+    final success = await auth.payBill(
+      billType: 'electricity',
+      provider: _selectedDisco!,
       accountNumber: _meterCtrl.text,
-      bankCode: 'ELEC',
       amount: double.tryParse(_amountCtrl.text) ?? 0,
-      narration: 'Electricity: $_selectedDisco',
     );
     if (mounted) {
       setState(() => _loading = false);
@@ -396,11 +396,12 @@ class _CableTvTabState extends State<_CableTvTab> {
     setState(() => _loading = true);
     final plan = _currentPlans.firstWhere((p) => p['name'] == _selectedPlan);
     final auth = context.read<AuthProvider>();
-    final success = await auth.bankTransfer(
+    final success = await auth.payBill(
+      billType: 'cable_tv',
+      provider: _selectedProvider!,
       accountNumber: _smartcardCtrl.text,
-      bankCode: 'CABLE',
       amount: (plan['price'] as int).toDouble(),
-      narration: '$_selectedProvider $_selectedPlan subscription',
+      metadata: {'plan': _selectedPlan},
     );
     if (mounted) {
       setState(() => _loading = false);
@@ -663,11 +664,11 @@ class _WaterTabState extends State<_WaterTab> {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _loading = true);
     final auth = context.read<AuthProvider>();
-    final success = await auth.bankTransfer(
+    final success = await auth.payBill(
+      billType: 'water',
+      provider: _selectedBoard!,
       accountNumber: _accountCtrl.text,
-      bankCode: 'WATER',
       amount: double.tryParse(_amountCtrl.text) ?? 0,
-      narration: 'Water bill: $_selectedBoard',
     );
     if (mounted) {
       setState(() => _loading = false);

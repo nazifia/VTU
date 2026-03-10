@@ -34,6 +34,14 @@ class FundWalletView(APIView):
         amount = serializer.validated_data['amount']
         reference = serializer.validated_data['reference']
 
+        # Idempotency: don't double-credit for the same reference
+        if Transaction.objects.filter(reference=reference).exists():
+            wallet = request.user.wallet
+            return Response({
+                'balance': str(wallet.balance),
+                'message': 'Wallet already funded with this reference.',
+            })
+
         wallet = request.user.wallet
         wallet.credit(amount)
 
@@ -46,7 +54,7 @@ class FundWalletView(APIView):
             status='success',
             description=f'Wallet funded with ₦{amount}',
             metadata={
-                'source': 'Bank Transfer / Usd',
+                'source': 'Bank Transfer / USSD',
                 'destination': 'Npay Wallet',
             }
         )
