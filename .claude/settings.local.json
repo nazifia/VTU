@@ -51,7 +51,8 @@
       "Bash(grep -rn \"localhost\\\\|127.0.0.1\\\\|0.0.0.0\" /c/Users/Dell/Desktop/VTU/vtu --include=\"*.py\" 2>/dev/null | head -20)",
       "Bash(ipconfig 2>/dev/null | grep -A 4 \"Wireless\\\\|Ethernet\" | grep \"IPv4\" | head -5)",
       "Bash(where ngrok:*)",
-      "Bash(find /c/Users/Dell/AppData/Local/Pub/Cache/hosted/pub.dev/local_auth_platform_interface-*/lib -name \"*.dart\" | xargs grep -l \"LocalAuthException\\\\|exception\" 2>/dev/null | head -5)"
+      "Bash(find /c/Users/Dell/AppData/Local/Pub/Cache/hosted/pub.dev/local_auth_platform_interface-*/lib -name \"*.dart\" | xargs grep -l \"LocalAuthException\\\\|exception\" 2>/dev/null | head -5)",
+      "Bash(Get-Content C:\\\\Users\\\\Dell\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\C--Users-Dell-Desktop-VTU\\\\tasks\\\\blqu4wlze.output -Wait 2>/dev/null | head -50)"
     ]
   }
 }

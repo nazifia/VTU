@@ -18,6 +18,7 @@ class AuthProvider with ChangeNotifier {
   List<TransactionModel> _transactions = [];
   String? _errorMessage;
   bool _isBiometricEnabled = false;
+  String? _avatarPath; // local file path of the picked profile picture
 
   AuthProvider(this._api, this._storage, this._biometric);
 
@@ -28,10 +29,12 @@ class AuthProvider with ChangeNotifier {
   bool get isAuthenticated => _state == AuthState.authenticated;
   bool get isLoading => _state == AuthState.loading;
   bool get isBiometricEnabled => _isBiometricEnabled;
+  String? get avatarPath => _avatarPath;
   ApiService get api => _api; // exposed so screens can call verifyAccount, getVirtualAccounts, etc.
 
   Future<void> init() async {
     _isBiometricEnabled = await _storage.isBiometricEnabled();
+    _avatarPath         = await _storage.getAvatarPath();
     final storedPhone   = await _storage.getStoredPhone();
 
     // When biometric login is enabled and an account exists, always show the
@@ -441,6 +444,13 @@ class AuthProvider with ChangeNotifier {
     if (_user != null) {
       _user = _user!.copyWith(isBiometricEnabled: value);
     }
+    notifyListeners();
+  }
+
+  /// Persists and broadcasts the locally-picked profile picture path.
+  Future<void> setAvatarPath(String? path) async {
+    _avatarPath = path;
+    await _storage.setAvatarPath(path);
     notifyListeners();
   }
 

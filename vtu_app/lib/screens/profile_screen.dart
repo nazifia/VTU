@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
+import '../widgets/avatar_circle.dart';
 import '../widgets/gradient_button.dart';
 import '../widgets/custom_text_field.dart';
 import '../widgets/glass_card.dart';
@@ -37,6 +39,128 @@ class _ProfileScreenState extends State<ProfileScreen> {
     _lastNameCtrl.dispose();
     _emailCtrl.dispose();
     super.dispose();
+  }
+
+  Future<void> _pickImage(ImageSource source) async {
+    try {
+      final picker = ImagePicker();
+      final XFile? picked = await picker.pickImage(
+        source: source,
+        maxWidth: 512,
+        maxHeight: 512,
+        imageQuality: 85,
+      );
+      if (picked == null || !mounted) return;
+      // Persist via AuthProvider so dashboard (and any other screen) updates too
+      await context.read<AuthProvider>().setAvatarPath(picked.path);
+    } on PlatformException catch (e) {
+      if (!mounted) return;
+      final msg = e.code == 'camera_access_denied'
+          ? 'Camera permission denied. Enable it in Settings.'
+          : e.code == 'photo_access_denied'
+              ? 'Gallery permission denied. Enable it in Settings.'
+              : 'Could not open image picker: ${e.message}';
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(msg),
+          backgroundColor: AppTheme.errorRed,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+      );
+    }
+  }
+
+  void _showImageSourceSheet() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        final isDark = Theme.of(ctx).brightness == Brightness.dark;
+        return Container(
+          decoration: BoxDecoration(
+            color: isDark ? const Color(0xFF1E1E2E) : Colors.white,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Center(
+                child: Container(
+                  width: 40, height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.withValues(alpha: 0.4),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text('Change Profile Photo',
+                  style: Theme.of(ctx).textTheme.titleMedium),
+              const SizedBox(height: 16),
+              ListTile(
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
+                leading: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AppTheme.primaryIndigo.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(Icons.camera_alt_rounded,
+                      color: AppTheme.primaryIndigo),
+                ),
+                title: const Text('Take Photo'),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _pickImage(ImageSource.camera);
+                },
+              ),
+              ListTile(
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
+                leading: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AppTheme.secondaryEmerald.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(Icons.photo_library_rounded,
+                      color: AppTheme.secondaryEmerald),
+                ),
+                title: const Text('Choose from Gallery'),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _pickImage(ImageSource.gallery);
+                },
+              ),
+              if (context.read<AuthProvider>().avatarPath != null) ...[
+                ListTile(
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                  leading: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: AppTheme.errorRed.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(Icons.delete_rounded,
+                        color: AppTheme.errorRed),
+                  ),
+                  title: const Text('Remove Photo',
+                      style: TextStyle(color: AppTheme.errorRed)),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    context.read<AuthProvider>().setAvatarPath(null);
+                  },
+                ),
+              ],
+            ],
+          ),
+        );
+      },
+    );
   }
 
   Future<void> _save() async {
@@ -102,23 +226,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     children: [
                       // Avatar
                       GestureDetector(
-                        onTap: _editing ? () {} : null,
+                        onTap: _editing ? _showImageSourceSheet : null,
                         child: Stack(
                           children: [
-                            CircleAvatar(
-                              radius: 52,
-                              backgroundColor: AppTheme.primaryIndigo.withValues(alpha: 0.15),
-                              child: Text(
-                                user != null
-                                    ? user.firstName[0].toUpperCase()
-                                    : 'U',
-                                style: const TextStyle(
-                                  fontSize: 40,
-                                  fontWeight: FontWeight.w700,
-                                  color: AppTheme.primaryIndigo,
-                                ),
-                              ),
-                            ),
+                            AvatarCircle(radius: 52, fontSize: 40),
                             if (_editing)
                               Positioned(
                                 bottom: 4,

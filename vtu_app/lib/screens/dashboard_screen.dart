@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../models/transaction_model.dart';
+import '../widgets/avatar_circle.dart';
 import '../widgets/glass_card.dart';
 import '../widgets/status_badge.dart';
 import '../config/theme.dart';
@@ -47,21 +48,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         // Header row
                         Row(
                           children: [
-                            CircleAvatar(
-                              radius: 22,
-                              backgroundColor:
-                                  AppTheme.primaryIndigo.withValues(alpha: 0.15),
-                              child: Text(
-                                user != null
-                                    ? user.firstName[0].toUpperCase()
-                                    : 'U',
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w700,
-                                  color: AppTheme.primaryIndigo,
-                                  fontSize: 18,
-                                ),
-                              ),
-                            ),
+                            const AvatarCircle(radius: 22, fontSize: 18),
                             const SizedBox(width: 12),
                             Column(
                               crossAxisAlignment: CrossAxisAlignment.start,

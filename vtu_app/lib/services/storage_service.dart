@@ -7,6 +7,7 @@ class StorageService {
   static const _biometricKey    = 'is_biometric_enabled';
   static const _serverUrlKey    = 'server_url';
   static const _phoneKey        = 'stored_phone';
+  static const _avatarPathKey   = 'avatar_path';
 
   // ── Tokens ──────────────────────────────────────────────────────────────
 
@@ -80,6 +81,22 @@ class StorageService {
   Future<String?> getStoredPhone() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString(_phoneKey);
+  }
+
+  // ── Avatar ────────────────────────────────────────────────────────────────
+
+  Future<String?> getAvatarPath() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_avatarPathKey);
+  }
+
+  Future<void> setAvatarPath(String? path) async {
+    final prefs = await SharedPreferences.getInstance();
+    if (path == null) {
+      await prefs.remove(_avatarPathKey);
+    } else {
+      await prefs.setString(_avatarPathKey, path);
+    }
   }
 
   // ── Server URL ────────────────────────────────────────────────────────────
