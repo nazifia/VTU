@@ -24,14 +24,24 @@ class ApiService {
   static const _dataPlansTtl      = Duration(minutes: 30);
   static const _defaultTtl        = Duration(seconds: 30);
 
-  ApiService(this._storage) {
+  ApiService(this._storage, {String? baseUrl}) {
     _dio = Dio(BaseOptions(
-      baseUrl: AppConfig.apiBaseUrl,
-      connectTimeout: const Duration(seconds: 8),
-      receiveTimeout: const Duration(seconds: 8),
+      baseUrl: baseUrl ?? AppConfig.apiBaseUrl,
+      connectTimeout: const Duration(seconds: 30),
+      receiveTimeout: const Duration(seconds: 60),
       headers: {'Content-Type': 'application/json'},
     ));
     _setupInterceptors();
+  }
+
+  /// Returns the current backend base URL.
+  String get baseUrl => _dio.options.baseUrl;
+
+  /// Updates the backend URL at runtime (e.g. after user configures it in Settings).
+  void updateBaseUrl(String url) {
+    final normalized = url.endsWith('/') ? url.substring(0, url.length - 1) : url;
+    _dio.options.baseUrl = normalized;
+    clearCache();
   }
 
   void _setupInterceptors() {

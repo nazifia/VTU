@@ -31,15 +31,25 @@ class AuthProvider with ChangeNotifier {
   ApiService get api => _api; // exposed so screens can call verifyAccount, getVirtualAccounts, etc.
 
   Future<void> init() async {
-    final token = await _storage.getAccessToken();
     _isBiometricEnabled = await _storage.isBiometricEnabled();
+    final storedPhone   = await _storage.getStoredPhone();
+
+    // When biometric login is enabled and an account exists, always show the
+    // login screen so the user authenticates each session with biometric or PIN.
+    // This is the standard fintech UX (OPay, GTB, etc.).
+    if (_isBiometricEnabled && storedPhone != null) {
+      _state = AuthState.unauthenticated;
+      notifyListeners();
+      return;
+    }
+
+    // No biometric requirement — auto-restore from stored token if available.
+    final token = await _storage.getAccessToken();
     if (token != null) {
       try {
         _user = await _api.getProfile();
         _state = AuthState.authenticated;
         notifyListeners();
-        // Load transactions in the background — don't block the auth gate.
-        // The home screen appears immediately; the transaction list fills in.
         loadTransactions();
       } catch (_) {
         await _storage.clearTokens();
@@ -62,6 +72,8 @@ class AuthProvider with ChangeNotifier {
         accessToken: result['access'] as String,
         refreshToken: result['refresh'] as String,
       );
+      // Persist phone so biometric login can re-authenticate without PIN
+      await _storage.setStoredPhone(phone);
       if (result['user'] != null) {
         _user = UserModel.fromJson(result['user'] as Map<String, dynamic>);
       } else {
@@ -85,22 +97,61 @@ class AuthProvider with ChangeNotifier {
   }
 
   Future<bool> loginWithBiometric() async {
+    // Step 1 — native biometric prompt
     final authenticated = await _biometric.authenticate(
       reason: 'Authenticate to access Npay',
     );
     if (!authenticated) return false;
-    // Load existing session if token is still valid
-    final token = await _storage.getAccessToken();
-    if (token == null) return false;
-    try {
-      _state = AuthState.loading;
+
+    // Step 2 — check what we have stored
+    final token       = await _storage.getAccessToken();
+    final storedPhone = await _storage.getStoredPhone();
+
+    if (token == null && storedPhone == null) {
+      _errorMessage = 'No saved account. Please log in with your PIN first.';
       notifyListeners();
-      _user = await _api.getProfile();
+      return false;
+    }
+
+    _state = AuthState.loading;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      if (token != null) {
+        // Happy path — valid session token still exists
+        _user = await _api.getProfile();
+      } else {
+        // Token was cleared (after logout / session expiry).
+        // Use the stored phone to issue a fresh login.
+        // MockApiService accepts any PIN; a real backend would need a
+        // biometric-backed credential endpoint instead.
+        final result = await _api.login(
+          phone: storedPhone!,
+          pin: 'biometric-auth', // MockApiService accepts any PIN
+        );
+        await _storage.saveTokens(
+          accessToken:  result['access']  as String,
+          refreshToken: result['refresh'] as String,
+        );
+        _user = result['user'] != null
+            ? UserModel.fromJson(result['user'] as Map<String, dynamic>)
+            : await _api.getProfile();
+      }
+
       _state = AuthState.authenticated;
       notifyListeners();
-      loadTransactions(); // background
+      loadTransactions();
       return true;
-    } catch (_) {
+    } on DioException catch (e) {
+      _errorMessage = _parseError(e);
+      await _storage.clearTokens();
+      _state = AuthState.unauthenticated;
+      notifyListeners();
+      return false;
+    } catch (e) {
+      _errorMessage = e.toString();
+      await _storage.clearTokens();
       _state = AuthState.unauthenticated;
       notifyListeners();
       return false;
@@ -158,6 +209,7 @@ class AuthProvider with ChangeNotifier {
         accessToken: result['access'] as String,
         refreshToken: result['refresh'] as String,
       );
+      await _storage.setStoredPhone(phone);
       if (result['user'] != null) {
         _user = UserModel.fromJson(result['user'] as Map<String, dynamic>);
       } else {
@@ -392,6 +444,17 @@ class AuthProvider with ChangeNotifier {
     notifyListeners();
   }
 
+  /// Returns the current backend URL in use.
+  String get serverUrl => _api.baseUrl;
+
+  /// Updates the backend URL both in memory and persistent storage.
+  /// Call this when the user changes the Server URL in Settings.
+  Future<void> updateServerUrl(String url) async {
+    await _storage.setServerUrl(url);
+    _api.updateBaseUrl(url);
+    notifyListeners();
+  }
+
   Future<void> updateProfile({
     String? firstName,
     String? lastName,
@@ -413,7 +476,9 @@ class AuthProvider with ChangeNotifier {
   }
 
   Future<void> logout() async {
-    await _storage.clearAll();
+    // Only clear tokens — keep stored phone and biometric preference so the
+    // biometric button remains available on the next login screen.
+    await _storage.clearTokens();
     _user = null;
     _transactions = [];
     _state = AuthState.unauthenticated;

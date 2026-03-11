@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../providers/config_provider.dart';
 import '../services/biometric_service.dart';
+import '../services/storage_service.dart';
 import '../widgets/gradient_button.dart';
 import '../widgets/custom_text_field.dart';
 import '../config/theme.dart';
@@ -43,8 +44,12 @@ class _LoginScreenState extends State<LoginScreen>
 
   Future<void> _checkBiometric() async {
     final bio = BiometricService();
-    final available = await bio.isAvailable();
-    if (mounted) setState(() => _biometricAvailable = available);
+    final storage = StorageService();
+    final available   = await bio.isAvailable();
+    final isEnabled   = await storage.isBiometricEnabled();
+    final hasAccount  = (await storage.getStoredPhone()) != null;
+    // Show button only when: hardware enrolled + user enabled it + account exists
+    if (mounted) setState(() => _biometricAvailable = available && isEnabled && hasAccount);
   }
 
   @override
@@ -79,12 +84,18 @@ class _LoginScreenState extends State<LoginScreen>
     final auth = context.read<AuthProvider>();
     final success = await auth.loginWithBiometric();
     if (!success && mounted) {
+      final msg = auth.errorMessage ?? 'Biometric authentication failed';
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Biometric authentication failed'),
+        SnackBar(
+          content: Text(msg),
+          backgroundColor: AppTheme.errorRed,
           behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
       );
+      auth.clearError();
+      // If session was cleared, hide the biometric button
+      _checkBiometric();
     }
   }
 

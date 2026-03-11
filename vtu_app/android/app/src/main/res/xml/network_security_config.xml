@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <!--
+        Allow cleartext (HTTP) traffic to any host.
+        This is needed for development backends served over HTTP
+        (local IP, ngrok HTTP tunnels, etc.).
+        For production, replace with an HTTPS endpoint and remove this.
+    -->
+    <base-config cleartextTrafficPermitted="true">
+        <trust-anchors>
+            <certificates src="system"/>
+        </trust-anchors>
+    </base-config>
+</network-security-config>

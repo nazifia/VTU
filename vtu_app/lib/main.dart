@@ -6,6 +6,7 @@ import 'providers/auth_provider.dart';
 import 'providers/theme_provider.dart';
 import 'providers/config_provider.dart';
 import 'services/api_service.dart';
+import 'services/mock_api_service.dart';
 import 'services/biometric_service.dart';
 import 'services/storage_service.dart';
 import 'screens/login_screen.dart';
@@ -26,7 +27,10 @@ void main() async {
   // Initialize services
   final storage = StorageService();
   final biometric = BiometricService();
-  final api = ApiService(storage);
+  // Use MockApiService for fully offline testing (no backend required).
+  // Switch to: ApiService(storage, baseUrl: await storage.getServerUrl())
+  // when connecting to a real backend.
+  final ApiService api = MockApiService(storage);
 
   // Initialize providers
   final themeProvider = ThemeProvider(storage);

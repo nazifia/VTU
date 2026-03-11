@@ -42,7 +42,16 @@
       "Bash(source env/Scripts/activate && python manage.py check 2>&1)",
       "Bash(cd /c/Users/Dell/Desktop/VTU/vtu && source env/Scripts/activate && python manage.py check 2>&1)",
       "Bash(cd /c/Users/Dell/Desktop/VTU/vtu && source env/Scripts/activate && python manage.py makemigrations accounts --name=\"add_bvn_nin_fields\" 2>&1)",
-      "Bash(source env/Scripts/activate && python manage.py migrate 2>&1)"
+      "Bash(source env/Scripts/activate && python manage.py migrate 2>&1)",
+      "Bash(grep -r \"USE_DEV_FIXTURES\\\\|BIOMETRIC_BYPASS\\\\|DEV_PHONE\\\\|DEV_PIN\" /c/Users/Dell/Desktop/VTU/vtu_app/lib --include=\"*.dart\" 2>/dev/null | head -20)",
+      "Bash(grep -rn \"debugShowCheckedModeBanner\\\\|DEBUG\\\\|debug\" /c/Users/Dell/Desktop/VTU/vtu_app/lib --include=\"*.dart\" 2>/dev/null | head -20)",
+      "Bash(grep -rn \"platform\\\\|Platform\\\\|Device.of\\\\|MediaQuery\" /c/Users/Dell/Desktop/VTU/vtu_app/lib --include=\"*.dart\" 2>/dev/null | head -10)",
+      "Bash(find /c/Users/Dell/Desktop/VTU/vtu_app/android -name \"*.xml\" 2>/dev/null | xargs grep -l \"network\" 2>/dev/null)",
+      "Bash(ls -la /c/Users/Dell/Desktop/VTU/vtu_app/android/app/src/main/res/drawable* 2>/dev/null)",
+      "Bash(grep -rn \"localhost\\\\|127.0.0.1\\\\|0.0.0.0\" /c/Users/Dell/Desktop/VTU/vtu --include=\"*.py\" 2>/dev/null | head -20)",
+      "Bash(ipconfig 2>/dev/null | grep -A 4 \"Wireless\\\\|Ethernet\" | grep \"IPv4\" | head -5)",
+      "Bash(where ngrok:*)",
+      "Bash(find /c/Users/Dell/AppData/Local/Pub/Cache/hosted/pub.dev/local_auth_platform_interface-*/lib -name \"*.dart\" | xargs grep -l \"LocalAuthException\\\\|exception\" 2>/dev/null | head -5)"
     ]
   }
 }

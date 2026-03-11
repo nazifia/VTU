@@ -132,6 +132,30 @@ class SettingsScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 16),
 
+                    // Server Configuration
+                    GlassCard(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _sectionHeader(context, 'Network', Icons.cloud_rounded),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Configure backend server for mobile internet',
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                          const SizedBox(height: 16),
+                          _actionTile(
+                            context,
+                            Icons.dns_rounded,
+                            'Server URL',
+                            auth.serverUrl,
+                            () => _showServerUrlSheet(context, auth),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
                     // Account
                     GlassCard(
                       child: Column(
@@ -308,6 +332,17 @@ class SettingsScreen extends StatelessWidget {
                 fontWeight: FontWeight.w700,
                 color: AppTheme.secondaryEmerald)),
       ],
+    );
+  }
+
+  // ── Server URL bottom sheet ───────────────────────────────────────────────
+
+  void _showServerUrlSheet(BuildContext context, AuthProvider auth) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _ServerUrlSheet(auth: auth),
     );
   }
 
@@ -751,6 +786,128 @@ class _WalletLimitsSheetState extends State<_WalletLimitsSheet> {
                           child: CircularProgressIndicator(
                               strokeWidth: 2, color: Colors.white))
                       : const Text('Save Limits',
+                          style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16)),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Server URL sheet ──────────────────────────────────────────────────────────
+
+class _ServerUrlSheet extends StatefulWidget {
+  final AuthProvider auth;
+  const _ServerUrlSheet({required this.auth});
+
+  @override
+  State<_ServerUrlSheet> createState() => _ServerUrlSheetState();
+}
+
+class _ServerUrlSheetState extends State<_ServerUrlSheet> {
+  late final TextEditingController _ctrl;
+  final _formKey = GlobalKey<FormState>();
+  bool _loading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = TextEditingController(text: widget.auth.serverUrl);
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _save() async {
+    if (!_formKey.currentState!.validate()) return;
+    setState(() => _loading = true);
+    await widget.auth.updateServerUrl(_ctrl.text.trim());
+    if (!mounted) return;
+    setState(() => _loading = false);
+    Navigator.pop(context);
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Server URL updated. Restart the app to apply.'),
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: AppTheme.secondaryEmerald,
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Padding(
+      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      child: Container(
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF1E1E2E) : Colors.white,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        padding: const EdgeInsets.fromLTRB(24, 20, 24, 32),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40, height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.withValues(alpha: 0.4),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+              Text('Server URL', style: Theme.of(context).textTheme.titleLarge),
+              const SizedBox(height: 4),
+              Text(
+                'Set the backend URL for mobile internet access.\nExample: http://your-server-ip:8000/api/v1',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+              const SizedBox(height: 24),
+              TextFormField(
+                controller: _ctrl,
+                keyboardType: TextInputType.url,
+                autocorrect: false,
+                decoration: const InputDecoration(
+                  labelText: 'API Base URL',
+                  prefixIcon: Icon(Icons.link_rounded),
+                  hintText: 'http://192.168.x.x:8000/api/v1',
+                ),
+                validator: (v) {
+                  if (v == null || v.trim().isEmpty) return 'URL is required';
+                  final uri = Uri.tryParse(v.trim());
+                  if (uri == null || !uri.hasScheme) return 'Enter a valid URL';
+                  return null;
+                },
+              ),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                height: 52,
+                child: ElevatedButton(
+                  onPressed: _loading ? null : _save,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.primaryIndigo,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14)),
+                  ),
+                  child: _loading
+                      ? const SizedBox(
+                          width: 22, height: 22,
+                          child: CircularProgressIndicator(
+                              strokeWidth: 2, color: Colors.white))
+                      : const Text('Save',
                           style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16)),
                 ),
               ),

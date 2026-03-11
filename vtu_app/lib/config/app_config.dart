@@ -10,12 +10,16 @@ class AppConfig {
   /// - Android emulator      → http://10.0.2.2:8000/api/v1   (emulator loopback)
   /// - iOS simulator         → http://127.0.0.1:8000/api/v1
   /// - Physical device       → must pass --dart-define=API_BASE_URL=http://`<LAN-IP>`:8000/api/v1
+  /// Default URL used when no runtime URL is configured.
+  /// Override at build time: flutter build apk --dart-define=API_BASE_URL=https://your-server.com/api/v1
+  /// Or configure at runtime via Settings → Server URL (for mobile internet).
   static String get apiBaseUrl {
     if (_envApiBaseUrl.isNotEmpty) return _envApiBaseUrl;
     if (kIsWeb) return 'http://localhost:8000/api/v1';
     if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
       return 'http://localhost:8000/api/v1';
     }
+    // Android emulator loopback; physical devices should configure URL in Settings
     if (Platform.isAndroid) return 'http://10.0.2.2:8000/api/v1';
     // iOS simulator
     return 'http://127.0.0.1:8000/api/v1';
