@@ -1,4 +1,5 @@
 from django.contrib import admin, messages
+from django.contrib.admin import AdminSite
 from django.utils.html import format_html, mark_safe
 from .models import SiteConfiguration
 
@@ -121,3 +122,81 @@ class SiteConfigurationAdmin(admin.ModelAdmin):
         return HttpResponseRedirect(
             reverse('admin:vtu_siteconfiguration_change', args=[obj.pk])
         )
+
+
+# ── Dashboard stats injection ──────────────────────────────────────────────────
+# Monkey-patch AdminSite.index to inject platform-wide stats into the
+# admin/index.html template context without needing a custom AdminSite subclass.
+
+_orig_index = AdminSite.index
+
+
+def _npay_index(self, request, extra_context=None):
+    from accounts.models import User
+    from transactions.models import Transaction
+    from wallet.models import Wallet
+    from django.db.models import Sum, Count, Q
+    from django.utils import timezone
+
+    now = timezone.now()
+    today = now.date()
+    month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+
+    try:
+        u = User.objects.aggregate(
+            total=Count('id'),
+            verified=Count('id', filter=Q(is_verified=True)),
+            unverified=Count('id', filter=Q(is_verified=False)),
+            active=Count('id', filter=Q(is_active=True)),
+            new_today=Count('id', filter=Q(date_joined__date=today)),
+        )
+        t = Transaction.objects.aggregate(
+            total=Count('id'),
+            success=Count('id', filter=Q(status='success')),
+            failed=Count('id', filter=Q(status='failed')),
+            pending=Count('id', filter=Q(status='pending')),
+            today_count=Count('id', filter=Q(created_at__date=today)),
+            today_vol=Sum('amount', filter=Q(
+                type='debit', status='success', created_at__date=today)),
+            month_vol=Sum('amount', filter=Q(
+                type='debit', status='success', created_at__gte=month_start)),
+            total_funded=Sum('amount', filter=Q(
+                type='credit', status='success', category='wallet_funding')),
+        )
+        w = Wallet.objects.aggregate(total_balance=Sum('balance'))
+
+        cat_breakdown = list(
+            Transaction.objects
+            .filter(type='debit', status='success', created_at__gte=month_start)
+            .values('category')
+            .annotate(total=Sum('amount'), count=Count('id'))
+            .order_by('-total')
+        )
+
+        dashboard = {
+            'users_total':      u['total'] or 0,
+            'users_verified':   u['verified'] or 0,
+            'users_unverified': u['unverified'] or 0,
+            'users_active':     u['active'] or 0,
+            'users_today':      u['new_today'] or 0,
+            'txns_total':       t['total'] or 0,
+            'txns_success':     t['success'] or 0,
+            'txns_failed':      t['failed'] or 0,
+            'txns_pending':     t['pending'] or 0,
+            'today_txns':       t['today_count'] or 0,
+            'today_volume':     f"₦{t['today_vol'] or 0:,.0f}",
+            'month_volume':     f"₦{t['month_vol'] or 0:,.0f}",
+            'total_funded':     f"₦{t['total_funded'] or 0:,.0f}",
+            'total_balance':    f"₦{w['total_balance'] or 0:,.2f}",
+            'category_breakdown': cat_breakdown,
+        }
+    except Exception:
+        dashboard = {}
+
+    ctx = {'npay_dashboard': dashboard}
+    if extra_context:
+        ctx.update(extra_context)
+    return _orig_index(self, request, extra_context=ctx)
+
+
+AdminSite.index = _npay_index

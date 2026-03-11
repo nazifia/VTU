@@ -1,0 +1,222 @@
+{% extends "admin/base_site.html" %}
+{% load i18n static log %}
+
+{% block extrastyle %}{{ block.super }}
+<link rel="stylesheet" href="{% static 'admin/css/dashboard.css' %}">
+<style>
+  /* ── Stats grid ────────────────────────────────────────────────────────── */
+  .npay-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+    gap: 14px;
+    margin-bottom: 28px;
+  }
+  .npay-card {
+    background: #fff;
+    border-radius: 8px;
+    padding: 16px 18px;
+    box-shadow: 0 1px 4px rgba(0,0,0,.07);
+    border-left: 4px solid #417690;
+  }
+  .npay-card.blue   { border-left-color: #3B82F6; }
+  .npay-card.green  { border-left-color: #10B981; }
+  .npay-card.red    { border-left-color: #EF4444; }
+  .npay-card.yellow { border-left-color: #F59E0B; }
+  .npay-card.purple { border-left-color: #8B5CF6; }
+  .npay-card.teal   { border-left-color: #14B8A6; }
+  .npay-label {
+    font-size: 11px;
+    color: #6B7280;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+  }
+  .npay-value {
+    font-size: 24px;
+    font-weight: 700;
+    color: #111827;
+    margin: 4px 0 2px;
+    line-height: 1.15;
+    word-break: break-all;
+  }
+  .npay-sub { font-size: 12px; color: #9CA3AF; }
+
+  /* ── Section title ─────────────────────────────────────────────────────── */
+  .npay-section {
+    font-size: 14px;
+    font-weight: 600;
+    color: #374151;
+    margin: 0 0 10px;
+    padding-bottom: 6px;
+    border-bottom: 2px solid #E5E7EB;
+  }
+
+  /* ── Quick-nav buttons ─────────────────────────────────────────────────── */
+  .npay-nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 28px;
+  }
+  .npay-nav a {
+    background: #417690;
+    color: #fff !important;
+    padding: 7px 16px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    text-decoration: none !important;
+    transition: opacity .15s;
+  }
+  .npay-nav a:hover { opacity: .85; }
+  .npay-nav a.accent { background: #F59E0B; color: #1F2937 !important; }
+</style>
+{% endblock %}
+
+{% block coltype %}colMS{% endblock %}
+{% block bodyclass %}{{ block.super }} dashboard{% endblock %}
+{% block nav-breadcrumbs %}{% endblock %}
+{% block nav-sidebar %}{% endblock %}
+
+{% block content %}
+{% if npay_dashboard %}
+
+{# ── Quick-nav ──────────────────────────────────────────────────────────────── #}
+<p class="npay-section">⚡ Quick Navigation</p>
+<div class="npay-nav">
+  <a href="{% url 'admin:accounts_user_changelist' %}">👤 Users</a>
+  <a href="{% url 'admin:wallet_wallet_changelist' %}">💳 Wallets</a>
+  <a href="{% url 'admin:transactions_transaction_changelist' %}">📋 Transactions</a>
+  <a href="{% url 'admin:accounts_otp_changelist' %}">🔑 OTPs</a>
+  <a href="{% url 'admin:accounts_user_add' %}" class="accent">➕ Add User</a>
+</div>
+
+{# ── Platform stats ─────────────────────────────────────────────────────────── #}
+<p class="npay-section">📊 Platform Overview</p>
+<div class="npay-grid">
+
+  <div class="npay-card purple">
+    <div class="npay-label">Total Users</div>
+    <div class="npay-value">{{ npay_dashboard.users_total }}</div>
+    <div class="npay-sub">{{ npay_dashboard.users_verified }} verified &middot; {{ npay_dashboard.users_today }} joined today</div>
+  </div>
+
+  <div class="npay-card blue">
+    <div class="npay-label">Active Users</div>
+    <div class="npay-value">{{ npay_dashboard.users_active }}</div>
+    <div class="npay-sub">{{ npay_dashboard.users_unverified }} awaiting verification</div>
+  </div>
+
+  <div class="npay-card teal">
+    <div class="npay-label">Total Wallet Balance</div>
+    <div class="npay-value">{{ npay_dashboard.total_balance }}</div>
+    <div class="npay-sub">Across all wallets</div>
+  </div>
+
+  <div class="npay-card green">
+    <div class="npay-label">Today's Volume</div>
+    <div class="npay-value">{{ npay_dashboard.today_volume }}</div>
+    <div class="npay-sub">{{ npay_dashboard.today_txns }} transactions today</div>
+  </div>
+
+  <div class="npay-card yellow">
+    <div class="npay-label">This Month's Volume</div>
+    <div class="npay-value">{{ npay_dashboard.month_volume }}</div>
+    <div class="npay-sub">Successful debits this month</div>
+  </div>
+
+  <div class="npay-card green">
+    <div class="npay-label">Total Funded</div>
+    <div class="npay-value">{{ npay_dashboard.total_funded }}</div>
+    <div class="npay-sub">Cumulative wallet top-ups</div>
+  </div>
+
+  <div class="npay-card blue">
+    <div class="npay-label">Total Transactions</div>
+    <div class="npay-value">{{ npay_dashboard.txns_total }}</div>
+    <div class="npay-sub">{{ npay_dashboard.txns_success }} successful</div>
+  </div>
+
+  <div class="npay-card yellow">
+    <div class="npay-label">Pending</div>
+    <div class="npay-value">{{ npay_dashboard.txns_pending }}</div>
+    <div class="npay-sub">Awaiting settlement</div>
+  </div>
+
+  <div class="npay-card red">
+    <div class="npay-label">Failed Transactions</div>
+    <div class="npay-value">{{ npay_dashboard.txns_failed }}</div>
+    <div class="npay-sub">May need review or refund</div>
+  </div>
+
+</div>
+
+{# ── Revenue by category ────────────────────────────────────────────────────── #}
+{% if npay_dashboard.category_breakdown %}
+<p class="npay-section">📈 Revenue by Category (This Month)</p>
+<div class="npay-grid">
+  {% for cat in npay_dashboard.category_breakdown %}
+  <div class="npay-card blue">
+    <div class="npay-label">
+      {% if cat.category == 'airtime' %}📱
+      {% elif cat.category == 'data' %}📶
+      {% elif cat.category == 'electricity' %}⚡
+      {% elif cat.category == 'cable_tv' %}📺
+      {% elif cat.category == 'water' %}💧
+      {% elif cat.category == 'bank_transfer' %}🏦
+      {% elif cat.category == 'wallet_funding' %}💰
+      {% else %}📋{% endif %}
+      {{ cat.category|title|cut:"_" }}
+    </div>
+    <div class="npay-value" style="font-size:20px;">₦{{ cat.total|floatformat:0 }}</div>
+    <div class="npay-sub">{{ cat.count }} transaction{{ cat.count|pluralize }}</div>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+{% endif %}{# /npay_dashboard #}
+
+{# ── Standard Django app list ───────────────────────────────────────────────── #}
+<div id="content-main">
+  {% include "admin/app_list.html" with app_list=app_list show_changelinks=True %}
+</div>
+{% endblock %}
+
+{# ── Recent actions sidebar (unchanged from Django default) ─────────────────── #}
+{% block sidebar %}
+<div id="content-related">
+  <div class="module" id="recent-actions-module">
+    <h2>{% translate 'Recent actions' %}</h2>
+    <h3>{% translate 'My actions' %}</h3>
+    {% load log %}
+    {% get_admin_log 10 as admin_log for_user user %}
+    {% if not admin_log %}
+    <p>{% translate 'None available' %}</p>
+    {% else %}
+    <ul class="actionlist">
+      {% for entry in admin_log %}
+      <li class="{% if entry.is_addition %}addlink{% endif %}{% if entry.is_change %}changelink{% endif %}{% if entry.is_deletion %}deletelink{% endif %}">
+        <span class="visually-hidden">
+          {% if entry.is_addition %}{% translate 'Added:' %}
+          {% elif entry.is_change %}{% translate 'Changed:' %}
+          {% elif entry.is_deletion %}{% translate 'Deleted:' %}{% endif %}
+        </span>
+        {% if entry.is_deletion or not entry.get_admin_url %}
+          {{ entry.object_repr }}
+        {% else %}
+          <a href="{{ entry.get_admin_url }}">{{ entry.object_repr }}</a>
+        {% endif %}
+        <br>
+        {% if entry.content_type %}
+          <span class="mini quiet">{% filter capfirst %}{{ entry.content_type.name }}{% endfilter %}</span>
+        {% else %}
+          <span class="mini quiet">{% translate 'Unknown content' %}</span>
+        {% endif %}
+      </li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
