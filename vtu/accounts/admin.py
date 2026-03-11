@@ -1,10 +1,38 @@
+import csv
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
+from django.http import HttpResponse
 from django.utils.html import format_html, mark_safe
 from django.urls import reverse
 from django.db.models import Sum, Count, Q
 from django.utils import timezone
 from .models import User, OTP
+
+
+# ── KYC status filter ─────────────────────────────────────────────────────────
+class KycStatusFilter(admin.SimpleListFilter):
+    title = 'KYC Status'
+    parameter_name = 'kyc_status'
+
+    def lookups(self, request, model_admin):
+        return [
+            ('pending',  '⏳ Pending review (submitted, not verified)'),
+            ('approved', '✅ Approved (at least one verified)'),
+            ('missing',  '—  Not submitted'),
+        ]
+
+    def queryset(self, request, queryset):
+        match self.value():
+            case 'pending':
+                return queryset.filter(
+                    Q(bvn__isnull=False, bvn_verified=False) |
+                    Q(nin__isnull=False, nin_verified=False)
+                )
+            case 'approved':
+                return queryset.filter(Q(bvn_verified=True) | Q(nin_verified=True))
+            case 'missing':
+                return queryset.filter(bvn__isnull=True, nin__isnull=True)
+        return queryset
 
 
 # ── Inline: Wallet (shown inside User detail page) ───────────────────────────
@@ -13,7 +41,7 @@ class WalletInline(admin.StackedInline):
     from wallet.models import Wallet
     model = Wallet
     extra = 0
-    fields = ('balance', 'updated_at')
+    fields = ('balance', 'daily_limit', 'monthly_limit', 'updated_at')
     readonly_fields = ('updated_at',)
     can_delete = False
 
@@ -46,7 +74,7 @@ class UserAdmin(BaseUserAdmin):
         'transaction_count_display',
         'date_joined',
     ]
-    list_filter = ['is_verified', 'is_staff', 'is_active', 'date_joined']
+    list_filter = ['is_verified', 'is_staff', 'is_active', KycStatusFilter, 'date_joined']
     search_fields = ['phone', 'first_name', 'last_name', 'email']
     readonly_fields = ['id', 'date_joined', 'wallet_balance_display', 'transaction_summary', 'bvn', 'nin']
     inlines = [WalletInline, TransactionInline]
@@ -62,7 +90,7 @@ class UserAdmin(BaseUserAdmin):
             'fields': ('is_active', 'is_verified', 'is_staff', 'is_superuser'),
         }),
         ('KYC / Identity', {
-            'description': 'BVN and NIN linked by the user. Tick *_verified to manually approve.',
+            'description': 'BVN and NIN submitted by the user. Tick *_verified to manually approve.',
             'fields': ('bvn', 'bvn_verified', 'nin', 'nin_verified'),
         }),
         ('Permissions', {
@@ -88,7 +116,13 @@ class UserAdmin(BaseUserAdmin):
         }),
     )
 
-    actions = ['verify_users', 'deactivate_users', 'activate_users', 'approve_kyc', 'revoke_kyc']
+    actions = [
+        'verify_users', 'deactivate_users', 'activate_users',
+        'approve_kyc', 'revoke_kyc',
+        'reset_transaction_pin',
+        'grant_staff', 'revoke_staff',
+        'export_users_csv',
+    ]
 
     # ── Custom list columns ──────────────────────────────────────────────────
 
@@ -179,6 +213,51 @@ class UserAdmin(BaseUserAdmin):
     def activate_users(self, request, queryset):
         updated = queryset.update(is_active=True)
         self.message_user(request, f'{updated} user(s) activated.')
+
+    @admin.action(description='🔑 Reset transaction PIN for selected users')
+    def reset_transaction_pin(self, request, queryset):
+        updated = queryset.update(transaction_pin=None)
+        self.message_user(request, f'Transaction PIN cleared for {updated} user(s). They must set a new PIN on next login.')
+
+    @admin.action(description='🛡️ Grant staff access to selected users')
+    def grant_staff(self, request, queryset):
+        updated = queryset.filter(is_staff=False).update(is_staff=True)
+        self.message_user(request, f'Staff access granted to {updated} user(s).')
+
+    @admin.action(description='🚫 Revoke staff access from selected users')
+    def revoke_staff(self, request, queryset):
+        # Never strip a superuser's staff flag
+        updated = queryset.exclude(is_superuser=True).filter(is_staff=True).update(is_staff=False)
+        self.message_user(request, f'Staff access revoked from {updated} user(s).')
+
+    @admin.action(description='📥 Export selected users to CSV')
+    def export_users_csv(self, request, queryset):
+        response = HttpResponse(content_type='text/csv')
+        ts = timezone.now().strftime('%Y%m%d_%H%M')
+        response['Content-Disposition'] = f'attachment; filename="users_{ts}.csv"'
+        writer = csv.writer(response)
+        writer.writerow([
+            'ID', 'Phone', 'First Name', 'Last Name', 'Email',
+            'Verified', 'Active', 'Staff',
+            'BVN', 'BVN Verified', 'NIN', 'NIN Verified',
+            'Wallet Balance', 'Transaction Count', 'Date Joined',
+        ])
+        for user in queryset.select_related('wallet'):
+            try:
+                balance = user.wallet.balance
+            except Exception:
+                balance = 0
+            writer.writerow([
+                str(user.id), user.phone, user.first_name, user.last_name,
+                user.email or '',
+                user.is_verified, user.is_active, user.is_staff,
+                user.bvn or '', user.bvn_verified,
+                user.nin or '', user.nin_verified,
+                str(balance), user.transactions.count(),
+                user.date_joined.strftime('%Y-%m-%d %H:%M:%S'),
+            ])
+        self.message_user(request, f'Exported {queryset.count()} users to CSV.')
+        return response
 
     def get_queryset(self, request):
         return (

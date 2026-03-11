@@ -1,0 +1,63 @@
+{% extends "admin/base_site.html" %}
+{% load i18n %}
+
+{% block content %}
+<div style="max-width:540px;">
+  <h1>💰 Credit Custom Amount</h1>
+  <p style="color:#6B7280; margin-bottom:20px;">
+    This will credit the specified amount to
+    <strong>{{ queryset.count }} wallet{{ queryset.count|pluralize }}</strong>
+    and create a wallet-funding transaction for each.
+  </p>
+
+  {% if form.errors %}
+  <ul class="errorlist">
+    {% for field in form %}{% for err in field.errors %}<li>{{ err }}</li>{% endfor %}{% endfor %}
+    {% for err in form.non_field_errors %}<li>{{ err }}</li>{% endfor %}
+  </ul>
+  {% endif %}
+
+  <form method="post">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="credit_custom">
+    {% for obj in queryset %}
+    <input type="hidden" name="{{ action_checkbox_name }}" value="{{ obj.pk }}">
+    {% endfor %}
+
+    <fieldset class="module aligned">
+      <div class="form-row">
+        <label for="id_amount" style="font-weight:600;">Amount (₦) <span style="color:#EF4444;">*</span></label>
+        <input id="id_amount" type="number" name="amount" min="1" step="0.01"
+               value="{{ form.amount.value|default_if_none:'' }}"
+               style="width:220px; padding:8px 12px; border:1px solid #ccc; border-radius:6px; font-size:15px;">
+        {% if form.amount.errors %}
+        <p class="errornote">{{ form.amount.errors|join:", " }}</p>
+        {% endif %}
+      </div>
+      <div class="form-row" style="margin-top:14px;">
+        <label for="id_description" style="font-weight:600;">Description (optional)</label>
+        <input id="id_description" type="text" name="description"
+               value="{{ form.description.value|default_if_none:'' }}"
+               placeholder="e.g. Bonus credit, Promo top-up"
+               style="width:100%; max-width:400px; padding:8px 12px; border:1px solid #ccc; border-radius:6px; font-size:14px;">
+      </div>
+    </fieldset>
+
+    <div style="margin-top:20px; display:flex; gap:12px; align-items:center;">
+      <input type="submit" name="apply" value="✅ Credit Wallets"
+             style="background:#10B981; color:#fff; padding:10px 24px; border:none; border-radius:6px; font-size:14px; font-weight:700; cursor:pointer;">
+      <a href="../" style="color:#6B7280; font-size:14px;">Cancel</a>
+    </div>
+  </form>
+
+  <div style="margin-top:28px; background:#F3F4F6; border-radius:8px; padding:14px 18px;">
+    <p style="font-size:13px; font-weight:600; margin:0 0 8px;">Selected wallets:</p>
+    {% for w in queryset %}
+    <div style="font-size:13px; color:#374151; padding:3px 0;">
+      📱 {{ w.user.phone }} — {{ w.user.full_name }}
+      <span style="color:#10B981; font-weight:700;">₦{{ w.balance }}</span>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}
