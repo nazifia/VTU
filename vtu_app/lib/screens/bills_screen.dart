@@ -120,18 +120,25 @@ class _ElectricityTabState extends State<_ElectricityTab> {
       );
       return;
     }
+    final amount = double.tryParse(_amountCtrl.text) ?? 0;
+    final balance = context.read<AuthProvider>().user?.balance ?? 0;
+    if (amount > balance) {
+      _showInsufficientBalanceSheet(context, amount, balance);
+      return;
+    }
+
     setState(() => _loading = true);
     final auth = context.read<AuthProvider>();
     final success = await auth.payBill(
       billType: 'electricity',
       provider: _selectedDisco!,
       accountNumber: _meterCtrl.text,
-      amount: double.tryParse(_amountCtrl.text) ?? 0,
+      amount: amount,
     );
     if (mounted) {
       setState(() => _loading = false);
       if (success) {
-        _showSuccess();
+        _showSuccess(amount);
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -144,7 +151,7 @@ class _ElectricityTabState extends State<_ElectricityTab> {
     }
   }
 
-  void _showSuccess() {
+  void _showSuccess(double amount) {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -153,7 +160,7 @@ class _ElectricityTabState extends State<_ElectricityTab> {
         color: const Color(0xFFF59E0B),
         title: 'Payment Successful!',
         subtitle:
-            '${(double.tryParse(_amountCtrl.text) ?? 0).formatCurrency} electricity credit sent to meter ${_meterCtrl.text}',
+            '${amount.formatCurrency} electricity credit sent to meter ${_meterCtrl.text}',
         onDone: () {
           Navigator.pop(context);
           Navigator.pop(context);
@@ -393,20 +400,27 @@ class _CableTvTabState extends State<_CableTvTab> {
       );
       return;
     }
-    setState(() => _loading = true);
     final plan = _currentPlans.firstWhere((p) => p['name'] == _selectedPlan);
+    final amount = (plan['price'] as int).toDouble();
+    final balance = context.read<AuthProvider>().user?.balance ?? 0;
+    if (amount > balance) {
+      _showInsufficientBalanceSheet(context, amount, balance);
+      return;
+    }
+
+    setState(() => _loading = true);
     final auth = context.read<AuthProvider>();
     final success = await auth.payBill(
       billType: 'cable_tv',
       provider: _selectedProvider!,
       accountNumber: _smartcardCtrl.text,
-      amount: (plan['price'] as int).toDouble(),
+      amount: amount,
       metadata: {'plan': _selectedPlan},
     );
     if (mounted) {
       setState(() => _loading = false);
       if (success) {
-        _showSuccess(plan);
+        _showSuccess(plan, amount);
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -419,7 +433,7 @@ class _CableTvTabState extends State<_CableTvTab> {
     }
   }
 
-  void _showSuccess(Map<String, dynamic> plan) {
+  void _showSuccess(Map<String, dynamic> plan, double amount) {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -428,7 +442,7 @@ class _CableTvTabState extends State<_CableTvTab> {
         color: AppTheme.primaryIndigo,
         title: 'Subscription Successful!',
         subtitle:
-            '$_selectedProvider ${plan['name']} (${(plan['price'] as num).formatCurrency}) renewed for ${_smartcardCtrl.text}',
+            '$_selectedProvider ${plan['name']} (${amount.formatCurrency}) renewed for ${_smartcardCtrl.text}',
         onDone: () {
           Navigator.pop(context);
           Navigator.pop(context);
@@ -662,13 +676,20 @@ class _WaterTabState extends State<_WaterTab> {
 
   Future<void> _pay() async {
     if (!_formKey.currentState!.validate()) return;
+    final amount = double.tryParse(_amountCtrl.text) ?? 0;
+    final balance = context.read<AuthProvider>().user?.balance ?? 0;
+    if (amount > balance) {
+      _showInsufficientBalanceSheet(context, amount, balance);
+      return;
+    }
+
     setState(() => _loading = true);
     final auth = context.read<AuthProvider>();
     final success = await auth.payBill(
       billType: 'water',
       provider: _selectedBoard!,
       accountNumber: _accountCtrl.text,
-      amount: double.tryParse(_amountCtrl.text) ?? 0,
+      amount: amount,
     );
     if (mounted) {
       setState(() => _loading = false);
@@ -681,7 +702,7 @@ class _WaterTabState extends State<_WaterTab> {
             color: const Color(0xFF0EA5E9),
             title: 'Payment Successful!',
             subtitle:
-                '${(double.tryParse(_amountCtrl.text) ?? 0).formatCurrency} water bill paid for account ${_accountCtrl.text}',
+                '${amount.formatCurrency} water bill paid for account ${_accountCtrl.text}',
             onDone: () {
               Navigator.pop(context);
               Navigator.pop(context);
@@ -799,6 +820,62 @@ class _WaterTabState extends State<_WaterTab> {
       ),
     );
   }
+}
+
+// ── Shared Insufficient Balance Sheet ────────────────────────────────────────
+
+void _showInsufficientBalanceSheet(
+    BuildContext context, double required, double current) {
+  showModalBottomSheet(
+    context: context,
+    backgroundColor: Colors.transparent,
+    builder: (_) => Container(
+      padding: const EdgeInsets.all(28),
+      decoration: BoxDecoration(
+        color: Theme.of(context).cardTheme.color,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 72,
+            height: 72,
+            decoration: BoxDecoration(
+              color: AppTheme.errorRed.withValues(alpha: 0.12),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.account_balance_wallet_rounded,
+                color: AppTheme.errorRed, size: 36),
+          ),
+          const SizedBox(height: 16),
+          const Text('Insufficient Balance',
+              style: TextStyle(fontWeight: FontWeight.w700, fontSize: 20)),
+          const SizedBox(height: 8),
+          Text(
+            'You need ${required.formatCurrency} but your wallet balance is ${current.formatCurrency}.',
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: Colors.grey),
+          ),
+          const SizedBox(height: 24),
+          GradientButton(
+            label: 'Fund Wallet',
+            icon: Icons.add_circle_rounded,
+            onPressed: () {
+              Navigator.pop(context);
+              Navigator.pushNamed(context, '/fund-wallet');
+            },
+          ),
+          const SizedBox(height: 8),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          const SizedBox(height: 8),
+        ],
+      ),
+    ),
+  );
 }
 
 // ── Shared Success Sheet ─────────────────────────────────────────────────────

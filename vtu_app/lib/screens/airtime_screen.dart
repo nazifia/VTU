@@ -57,6 +57,12 @@ class _AirtimeScreenState extends State<AirtimeScreen> {
       return;
     }
 
+    final balance = context.read<AuthProvider>().user?.balance ?? 0;
+    if (amount > balance) {
+      _showInsufficientBalanceSheet(amount, balance);
+      return;
+    }
+
     setState(() => _loading = true);
     final success = await context.read<AuthProvider>().purchaseAirtime(
           phone: _phoneCtrl.text.trim(),
@@ -78,6 +84,59 @@ class _AirtimeScreenState extends State<AirtimeScreen> {
         );
       }
     }
+  }
+
+  void _showInsufficientBalanceSheet(double required, double current) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (_) => Container(
+        padding: const EdgeInsets.all(28),
+        decoration: BoxDecoration(
+          color: Theme.of(context).cardTheme.color,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 72,
+              height: 72,
+              decoration: BoxDecoration(
+                color: AppTheme.errorRed.withValues(alpha: 0.12),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.account_balance_wallet_rounded,
+                  color: AppTheme.errorRed, size: 36),
+            ),
+            const SizedBox(height: 16),
+            const Text('Insufficient Balance',
+                style: TextStyle(fontWeight: FontWeight.w700, fontSize: 20)),
+            const SizedBox(height: 8),
+            Text(
+              'You need ${required.formatCurrency} but your wallet balance is ${current.formatCurrency}.',
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: Colors.grey),
+            ),
+            const SizedBox(height: 24),
+            GradientButton(
+              label: 'Fund Wallet',
+              icon: Icons.add_circle_rounded,
+              onPressed: () {
+                Navigator.pop(context);
+                Navigator.pushNamed(context, '/fund-wallet');
+              },
+            ),
+            const SizedBox(height: 8),
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
   }
 
   void _showSuccessSheet(double amount) {
