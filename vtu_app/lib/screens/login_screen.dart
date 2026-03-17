@@ -60,43 +60,64 @@ class _LoginScreenState extends State<LoginScreen>
     super.dispose();
   }
 
+  /// Normalise the phone so it is always in 11-digit local format
+  /// (e.g. 08012345678) before sending to the backend.
+  String _normalisePhone(String raw) {
+    final digits = raw.trim();
+    // 2348012345678 → 08012345678
+    if (RegExp(r'^234[789]\d{9}$').hasMatch(digits)) {
+      return '0${digits.substring(3)}';
+    }
+    // 8012345678 → 08012345678
+    if (RegExp(r'^[789]\d{9}$').hasMatch(digits)) {
+      return '0$digits';
+    }
+    return digits;
+  }
+
   Future<void> _login() async {
     if (!_formKey.currentState!.validate()) return;
     final auth = context.read<AuthProvider>();
     final success = await auth.login(
-      phone: _phoneController.text.trim(),
+      phone: _normalisePhone(_phoneController.text),
       pin: _pinController.text.trim(),
     );
-    if (!success && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(auth.errorMessage ?? 'Login failed'),
-          backgroundColor: AppTheme.errorRed,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        ),
-      );
-      auth.clearError();
+    if (!mounted) return;
+    if (success) {
+      Navigator.pushNamedAndRemoveUntil(context, '/home', (_) => false);
+      return;
     }
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(auth.errorMessage ?? 'Login failed'),
+        backgroundColor: AppTheme.errorRed,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+    );
+    auth.clearError();
   }
 
   Future<void> _biometricLogin() async {
     final auth = context.read<AuthProvider>();
     final success = await auth.loginWithBiometric();
-    if (!success && mounted) {
-      final msg = auth.errorMessage ?? 'Biometric authentication failed';
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(msg),
-          backgroundColor: AppTheme.errorRed,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        ),
-      );
-      auth.clearError();
-      // If session was cleared, hide the biometric button
-      _checkBiometric();
+    if (!mounted) return;
+    if (success) {
+      Navigator.pushNamedAndRemoveUntil(context, '/home', (_) => false);
+      return;
     }
+    final msg = auth.errorMessage ?? 'Biometric authentication failed';
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(msg),
+        backgroundColor: AppTheme.errorRed,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+    );
+    auth.clearError();
+    // If session was cleared, hide the biometric button
+    _checkBiometric();
   }
 
   Future<void> _devLogin() async {
@@ -110,9 +131,11 @@ class _LoginScreenState extends State<LoginScreen>
   String? _validatePhone(String? v) {
     if (v == null || v.isEmpty) return 'Phone number is required';
     final cleaned = v.replaceAll(RegExp(r'[\s\-]'), '');
+    // Accepts: 08012345678 (11 digits), 8012345678 (10 digits),
+    // or 2348012345678 (13 digits — country code without +)
     if (!RegExp(r'^0[789]\d{9}$').hasMatch(cleaned) &&
         !RegExp(r'^[789]\d{9}$').hasMatch(cleaned) &&
-        !RegExp(r'^\+234[789]\d{9}$').hasMatch(cleaned)) {
+        !RegExp(r'^234[789]\d{9}$').hasMatch(cleaned)) {
       return 'Enter a valid Nigerian phone number';
     }
     return null;

@@ -278,10 +278,12 @@ class AuthProvider with ChangeNotifier {
     required String provider,
     required String planId,
     required double amount,
+    required String transactionPin,
   }) async {
     try {
       await _api.purchaseData(
         phone: phone, provider: provider, planId: planId, amount: amount,
+        transactionPin: transactionPin,
       );
       await _postMutationRefresh();
       return true;

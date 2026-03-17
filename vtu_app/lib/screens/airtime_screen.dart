@@ -24,6 +24,7 @@ class _AirtimeScreenState extends State<AirtimeScreen> {
   String? _selectedProvider;
   double? _selectedAmount;
   bool _loading = false;
+  bool _forSelf = true;
 
   static const _providers = [
     {'name': 'MTN', 'color': Color(0xFFFFCC00), 'icon': '🔵'},
@@ -33,6 +34,18 @@ class _AirtimeScreenState extends State<AirtimeScreen> {
   ];
 
   static const _presets = [200.0, 500.0, 1000.0, 2000.0, 5000.0];
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Pre-fill with own number when Self is active and field is empty
+    if (_forSelf && _phoneCtrl.text.isEmpty) {
+      final selfPhone = context.read<AuthProvider>().user?.phone ?? '';
+      _phoneCtrl.text = selfPhone
+          .replaceAll('+234', '0')
+          .replaceAll(RegExp(r'^\+'), '');
+    }
+  }
 
   @override
   void dispose() {
@@ -375,17 +388,98 @@ class _AirtimeScreenState extends State<AirtimeScreen> {
                             children: [
                               Text('Phone Number',
                                   style: Theme.of(context).textTheme.titleMedium),
-                              const SizedBox(height: 16),
-                             Row(
+                              const SizedBox(height: 12),
+                              // Self / Others toggle
+                              Container(
+                                decoration: BoxDecoration(
+                                  color: Theme.of(context).colorScheme.surface,
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Expanded(
+                                      child: GestureDetector(
+                                        onTap: () {
+                                          final selfPhone = context
+                                              .read<AuthProvider>()
+                                              .user
+                                              ?.phone ?? '';
+                                          setState(() {
+                                            _forSelf = true;
+                                            _phoneCtrl.text = selfPhone
+                                                .replaceAll('+234', '0')
+                                                .replaceAll(RegExp(r'^\+'), '');
+                                          });
+                                        },
+                                        child: AnimatedContainer(
+                                          duration: const Duration(milliseconds: 200),
+                                          padding: const EdgeInsets.symmetric(vertical: 10),
+                                          decoration: BoxDecoration(
+                                            gradient: _forSelf ? AppTheme.primaryGradient : null,
+                                            borderRadius: BorderRadius.circular(12),
+                                          ),
+                                          child: Row(
+                                            mainAxisAlignment: MainAxisAlignment.center,
+                                            children: [
+                                              Icon(Icons.person_rounded,
+                                                  size: 16,
+                                                  color: _forSelf ? Colors.white : null),
+                                              const SizedBox(width: 6),
+                                              Text('Self',
+                                                  style: TextStyle(
+                                                    fontWeight: FontWeight.w600,
+                                                    color: _forSelf ? Colors.white : null,
+                                                  )),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    Expanded(
+                                      child: GestureDetector(
+                                        onTap: () => setState(() {
+                                          _forSelf = false;
+                                          _phoneCtrl.clear();
+                                        }),
+                                        child: AnimatedContainer(
+                                          duration: const Duration(milliseconds: 200),
+                                          padding: const EdgeInsets.symmetric(vertical: 10),
+                                          decoration: BoxDecoration(
+                                            gradient: !_forSelf ? AppTheme.primaryGradient : null,
+                                            borderRadius: BorderRadius.circular(12),
+                                          ),
+                                          child: Row(
+                                            mainAxisAlignment: MainAxisAlignment.center,
+                                            children: [
+                                              Icon(Icons.people_rounded,
+                                                  size: 16,
+                                                  color: !_forSelf ? Colors.white : null),
+                                              const SizedBox(width: 6),
+                                              Text('Others',
+                                                  style: TextStyle(
+                                                    fontWeight: FontWeight.w600,
+                                                    color: !_forSelf ? Colors.white : null,
+                                                  )),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(height: 14),
+                              Row(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Expanded(
                                     child: CustomTextField(
                                       controller: _phoneCtrl,
-                                      label: 'Phone Number',
+                                      label: _forSelf ? 'My Number' : 'Recipient Number',
                                       hint: '08012345678',
                                       prefixIcon: Icons.phone_android_rounded,
                                       keyboardType: TextInputType.phone,
+                                      readOnly: _forSelf,
                                       inputFormatters: [
                                         FilteringTextInputFormatter.digitsOnly,
                                         LengthLimitingTextInputFormatter(11),
@@ -397,23 +491,24 @@ class _AirtimeScreenState extends State<AirtimeScreen> {
                                       },
                                     ),
                                   ),
-                                  const SizedBox(width: 8),
-                                  IconButton.filled(
-                                    tooltip: 'Pick from contacts',
-                                    style: IconButton.styleFrom(
-                                      backgroundColor: AppTheme.primaryIndigo
-                                          .withValues(alpha: 0.12),
-                                      foregroundColor: AppTheme.primaryIndigo,
+                                  if (!_forSelf) ...[
+                                    const SizedBox(width: 8),
+                                    IconButton.filled(
+                                      tooltip: 'Pick from contacts',
+                                      style: IconButton.styleFrom(
+                                        backgroundColor: AppTheme.primaryIndigo
+                                            .withValues(alpha: 0.12),
+                                        foregroundColor: AppTheme.primaryIndigo,
+                                      ),
+                                      icon: const Icon(Icons.contacts_rounded),
+                                      onPressed: () async {
+                                        final phone = await pickContactPhone(context);
+                                        if (phone != null) {
+                                          setState(() => _phoneCtrl.text = phone);
+                                        }
+                                      },
                                     ),
-                                    icon: const Icon(Icons.contacts_rounded),
-                                    onPressed: () async {
-                                      final phone =
-                                          await pickContactPhone(context);
-                                      if (phone != null) {
-                                        setState(() => _phoneCtrl.text = phone);
-                                      }
-                                    },
-                                  ),
+                                  ],
                                 ],
                               ),
                             ],

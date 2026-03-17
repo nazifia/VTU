@@ -9,6 +9,7 @@ import '../widgets/glass_card.dart';
 import '../widgets/contact_picker.dart';
 import '../config/theme.dart';
 import '../utils/currency_formatter.dart';
+
 class DataScreen extends StatefulWidget {
   const DataScreen({super.key});
 
@@ -22,6 +23,7 @@ class _DataScreenState extends State<DataScreen> {
   String? _selectedProvider;
   _DataBundle? _selectedBundle;
   bool _loading = false;
+  bool _forSelf = true;
 
   static const _providers = [
     {'name': 'MTN', 'color': Color(0xFFFFCC00)},
@@ -30,19 +32,64 @@ class _DataScreenState extends State<DataScreen> {
     {'name': '9mobile', 'color': Color(0xFF006633)},
   ];
 
-  static const _bundles = <_DataBundle>[
-    _DataBundle('500MB', 100, '1 Day', 'mtn_500mb_1day'),
-    _DataBundle('1GB', 200, '7 Days', 'mtn_1gb_7days'),
-    _DataBundle('2GB', 500, '30 Days', 'mtn_2gb_30days'),
-    _DataBundle('5GB', 1000, '30 Days', 'mtn_5gb_30days'),
-    _DataBundle('10GB', 2000, '30 Days', 'mtn_10gb_30days'),
-    _DataBundle('20GB', 3500, '30 Days', 'mtn_20gb_30days'),
+  // All possible bundles — availability varies by provider
+  static const _allBundles = <_DataBundle>[
+    _DataBundle('500MB', 100, '1 Day'),
+    _DataBundle('1GB', 200, '7 Days'),
+    _DataBundle('2GB', 500, '30 Days'),
+    _DataBundle('5GB', 1000, '30 Days'),
+    _DataBundle('10GB', 2000, '30 Days'),
+    _DataBundle('20GB', 3500, '30 Days'),
   ];
+
+  List<_DataBundle> get _bundles {
+    switch (_selectedProvider) {
+      case '9mobile':
+        return _allBundles
+            .where((b) => !['10GB', '20GB'].contains(b.size))
+            .toList();
+      case 'Glo':
+      case 'Airtel':
+        return _allBundles.where((b) => b.size != '20GB').toList();
+      default:
+        return List.from(_allBundles);
+    }
+  }
+
+  String _planId(_DataBundle bundle) {
+    final provider = (_selectedProvider ?? '').toLowerCase();
+    final size = bundle.size.toLowerCase();
+    final validity = bundle.validity.toLowerCase().replaceAll(' ', '');
+    return '${provider}_${size}_$validity';
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_forSelf && _phoneCtrl.text.isEmpty) {
+      final selfPhone = context.read<AuthProvider>().user?.phone ?? '';
+      _phoneCtrl.text = selfPhone
+          .replaceAll('+234', '0')
+          .replaceAll(RegExp(r'^\+'), '');
+    }
+  }
 
   @override
   void dispose() {
     _phoneCtrl.dispose();
     super.dispose();
+  }
+
+  Future<String?> _askTransactionPin() {
+    return showModalBottomSheet<String>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => _PinSheet(
+        bundleSize: _selectedBundle?.size ?? '',
+        phone: _phoneCtrl.text,
+      ),
+    );
   }
 
   Future<void> _buyData() async {
@@ -67,12 +114,16 @@ class _DataScreenState extends State<DataScreen> {
       return;
     }
 
+    final pin = await _askTransactionPin();
+    if (pin == null || !mounted) return;
+
     setState(() => _loading = true);
     final success = await context.read<AuthProvider>().purchaseData(
           phone: _phoneCtrl.text.trim(),
           provider: _selectedProvider!,
-          planId: _selectedBundle!.planId,
+          planId: _planId(_selectedBundle!),
           amount: amount,
+          transactionPin: pin,
         );
     if (mounted) {
       setState(() => _loading = false);
@@ -161,11 +212,11 @@ class _DataScreenState extends State<DataScreen> {
               width: 72,
               height: 72,
               decoration: BoxDecoration(
-                color: const Color(0xFF8B5CF6).withValues(alpha: 0.15),
+                color: AppTheme.secondaryEmerald.withValues(alpha: 0.15),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.wifi_rounded,
-                  color: Color(0xFF8B5CF6), size: 40),
+              child: const Icon(Icons.check_rounded,
+                  color: AppTheme.secondaryEmerald, size: 40),
             ),
             const SizedBox(height: 16),
             const Text('Purchase Successful!',
@@ -195,25 +246,30 @@ class _DataScreenState extends State<DataScreen> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     const dataColor = Color(0xFF8B5CF6);
+    final bundles = _bundles;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Buy Data'),
-        backgroundColor:
-            isDark ? AppTheme.darkBgGradient.colors.first : AppTheme.lightBgGradient.colors.first,
-      ),
       body: Container(
         decoration: BoxDecoration(
           gradient: isDark ? AppTheme.darkBgGradient : AppTheme.lightBgGradient,
         ),
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-          child: Form(
-            key: _formKey,
+        child: SafeArea(
+          child: Column(
+            children: [
+              AppBar(
+                title: const Text('Buy Data'),
+                backgroundColor: Colors.transparent,
+              ),
+              Expanded(
+                child: SingleChildScrollView(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                  child: Form(
+                    key: _formKey,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        // Provider selector
+                        // ── Network selector ───────────────────────────────
                         GlassCard(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -257,6 +313,38 @@ class _DataScreenState extends State<DataScreen> {
                                       ),
                                     ),
                                   ),
+                                  itemBuilder: (ctx, name, isSelected, _) {
+                                    final p = _providers
+                                        .firstWhere((x) => x['name'] == name);
+                                    final color = p['color'] as Color;
+                                    return ListTile(
+                                      leading: CircleAvatar(
+                                        radius: 16,
+                                        backgroundColor:
+                                            color.withValues(alpha: 0.2),
+                                        child: Text(
+                                          name[0],
+                                          style: TextStyle(
+                                            color: color,
+                                            fontWeight: FontWeight.w800,
+                                          ),
+                                        ),
+                                      ),
+                                      title: Text(
+                                        name,
+                                        style: TextStyle(
+                                          fontWeight: isSelected
+                                              ? FontWeight.w700
+                                              : FontWeight.w500,
+                                          color: isSelected ? color : null,
+                                        ),
+                                      ),
+                                      trailing: isSelected
+                                          ? Icon(Icons.check_circle_rounded,
+                                              color: color)
+                                          : null,
+                                    );
+                                  },
                                   menuProps: MenuProps(
                                     borderRadius: BorderRadius.circular(16),
                                     elevation: 8,
@@ -269,10 +357,82 @@ class _DataScreenState extends State<DataScreen> {
                                 validator: (v) =>
                                     v == null ? 'Select a provider' : null,
                               ),
+                              // Visual quick-select row
+                              const SizedBox(height: 16),
+                              Row(
+                                children: _providers.map((p) {
+                                  final name = p['name'] as String;
+                                  final color = p['color'] as Color;
+                                  final selected = _selectedProvider == name;
+                                  return Expanded(
+                                    child: Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 4),
+                                      child: GestureDetector(
+                                        onTap: () => setState(() {
+                                          _selectedProvider = name;
+                                          _selectedBundle = null;
+                                        }),
+                                        child: AnimatedContainer(
+                                          duration: const Duration(
+                                              milliseconds: 200),
+                                          padding: const EdgeInsets.symmetric(
+                                              vertical: 12),
+                                          decoration: BoxDecoration(
+                                            color: selected
+                                                ? color.withValues(alpha: 0.18)
+                                                : Colors.transparent,
+                                            borderRadius:
+                                                BorderRadius.circular(14),
+                                            border: Border.all(
+                                              color: selected
+                                                  ? color
+                                                  : Theme.of(context)
+                                                      .dividerColor
+                                                      .withValues(alpha: 0.3),
+                                              width: selected ? 2 : 1,
+                                            ),
+                                          ),
+                                          child: Column(
+                                            children: [
+                                              CircleAvatar(
+                                                radius: 16,
+                                                backgroundColor:
+                                                    color.withValues(alpha: 0.2),
+                                                child: Text(
+                                                  name[0],
+                                                  style: TextStyle(
+                                                    color: color,
+                                                    fontWeight: FontWeight.w800,
+                                                    fontSize: 14,
+                                                  ),
+                                                ),
+                                              ),
+                                              const SizedBox(height: 6),
+                                              Text(
+                                                name,
+                                                style: TextStyle(
+                                                  fontSize: 10,
+                                                  fontWeight: selected
+                                                      ? FontWeight.w700
+                                                      : FontWeight.w400,
+                                                  color:
+                                                      selected ? color : null,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                }).toList(),
+                              ),
                             ],
                           ),
                         ),
                         const SizedBox(height: 16),
+                        // ── Phone number ───────────────────────────────────
                         GlassCard(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -280,23 +440,130 @@ class _DataScreenState extends State<DataScreen> {
                               Text('Phone Number',
                                   style:
                                       Theme.of(context).textTheme.titleMedium),
-                              const SizedBox(height: 16),
+                              const SizedBox(height: 12),
+                              Container(
+                                decoration: BoxDecoration(
+                                  color:
+                                      Theme.of(context).colorScheme.surface,
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Expanded(
+                                      child: GestureDetector(
+                                        onTap: () {
+                                          final selfPhone = context
+                                                  .read<AuthProvider>()
+                                                  .user
+                                                  ?.phone ??
+                                              '';
+                                          setState(() {
+                                            _forSelf = true;
+                                            _phoneCtrl.text = selfPhone
+                                                .replaceAll('+234', '0')
+                                                .replaceAll(
+                                                    RegExp(r'^\+'), '');
+                                          });
+                                        },
+                                        child: AnimatedContainer(
+                                          duration: const Duration(
+                                              milliseconds: 200),
+                                          padding: const EdgeInsets.symmetric(
+                                              vertical: 10),
+                                          decoration: BoxDecoration(
+                                            gradient: _forSelf
+                                                ? AppTheme.primaryGradient
+                                                : null,
+                                            borderRadius:
+                                                BorderRadius.circular(12),
+                                          ),
+                                          child: Row(
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.center,
+                                            children: [
+                                              Icon(Icons.person_rounded,
+                                                  size: 16,
+                                                  color: _forSelf
+                                                      ? Colors.white
+                                                      : null),
+                                              const SizedBox(width: 6),
+                                              Text('Self',
+                                                  style: TextStyle(
+                                                    fontWeight: FontWeight.w600,
+                                                    color: _forSelf
+                                                        ? Colors.white
+                                                        : null,
+                                                  )),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    Expanded(
+                                      child: GestureDetector(
+                                        onTap: () => setState(() {
+                                          _forSelf = false;
+                                          _phoneCtrl.clear();
+                                        }),
+                                        child: AnimatedContainer(
+                                          duration: const Duration(
+                                              milliseconds: 200),
+                                          padding: const EdgeInsets.symmetric(
+                                              vertical: 10),
+                                          decoration: BoxDecoration(
+                                            gradient: !_forSelf
+                                                ? AppTheme.primaryGradient
+                                                : null,
+                                            borderRadius:
+                                                BorderRadius.circular(12),
+                                          ),
+                                          child: Row(
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.center,
+                                            children: [
+                                              Icon(Icons.people_rounded,
+                                                  size: 16,
+                                                  color: !_forSelf
+                                                      ? Colors.white
+                                                      : null),
+                                              const SizedBox(width: 6),
+                                              Text('Others',
+                                                  style: TextStyle(
+                                                    fontWeight: FontWeight.w600,
+                                                    color: !_forSelf
+                                                        ? Colors.white
+                                                        : null,
+                                                  )),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(height: 14),
                               Row(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Expanded(
                                     child: CustomTextField(
                                       controller: _phoneCtrl,
-                                      label: 'Phone Number',
+                                      label: _forSelf
+                                          ? 'My Number'
+                                          : 'Recipient Number',
                                       hint: '08012345678',
                                       prefixIcon: Icons.phone_android_rounded,
                                       keyboardType: TextInputType.phone,
+                                      readOnly: _forSelf,
                                       inputFormatters: [
                                         FilteringTextInputFormatter.digitsOnly,
                                         LengthLimitingTextInputFormatter(11),
                                       ],
                                       validator: (v) {
-                                        if (v!.isEmpty) return 'Phone number required';
+                                        if (v!.isEmpty) {
+                                          return 'Phone number required';
+                                        }
                                         if (v.length < 11) {
                                           return 'Enter valid phone number';
                                         }
@@ -304,30 +571,33 @@ class _DataScreenState extends State<DataScreen> {
                                       },
                                     ),
                                   ),
-                                  const SizedBox(width: 8),
-                                  IconButton.filled(
-                                    tooltip: 'Pick from contacts',
-                                    style: IconButton.styleFrom(
-                                      backgroundColor: const Color(0xFF8B5CF6)
-                                          .withValues(alpha: 0.12),
-                                      foregroundColor: const Color(0xFF8B5CF6),
+                                  if (!_forSelf) ...[
+                                    const SizedBox(width: 8),
+                                    IconButton.filled(
+                                      tooltip: 'Pick from contacts',
+                                      style: IconButton.styleFrom(
+                                        backgroundColor: dataColor
+                                            .withValues(alpha: 0.12),
+                                        foregroundColor: dataColor,
+                                      ),
+                                      icon: const Icon(Icons.contacts_rounded),
+                                      onPressed: () async {
+                                        final phone =
+                                            await pickContactPhone(context);
+                                        if (phone != null) {
+                                          setState(
+                                              () => _phoneCtrl.text = phone);
+                                        }
+                                      },
                                     ),
-                                    icon: const Icon(Icons.contacts_rounded),
-                                    onPressed: () async {
-                                      final phone =
-                                          await pickContactPhone(context);
-                                      if (phone != null) {
-                                        setState(() => _phoneCtrl.text = phone);
-                                      }
-                                    },
-                                  ),
+                                  ],
                                 ],
                               ),
                             ],
                           ),
                         ),
                         const SizedBox(height: 16),
-                        // Bundle grid
+                        // ── Bundle selection ───────────────────────────────
                         GlassCard(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -336,95 +606,103 @@ class _DataScreenState extends State<DataScreen> {
                                   style:
                                       Theme.of(context).textTheme.titleMedium),
                               const SizedBox(height: 16),
-                              GridView.builder(
-                                shrinkWrap: true,
-                                physics: const NeverScrollableScrollPhysics(),
-                                gridDelegate:
-                                    const SliverGridDelegateWithFixedCrossAxisCount(
-                                  crossAxisCount: 3,
-                                  crossAxisSpacing: 10,
-                                  mainAxisSpacing: 10,
-                                  childAspectRatio: 1.05,
-                                ),
-                                itemCount: _bundles.length,
-                                itemBuilder: (_, i) {
-                                  final b = _bundles[i];
-                                  final isSelected = _selectedBundle == b;
-                                  return GestureDetector(
-                                    onTap: () =>
-                                        setState(() => _selectedBundle = b),
-                                    child: AnimatedContainer(
-                                      duration:
-                                          const Duration(milliseconds: 200),
-                                      decoration: BoxDecoration(
-                                        gradient: isSelected
-                                            ? LinearGradient(
-                                                colors: [
-                                                  dataColor,
-                                                  dataColor.withValues(
-                                                      alpha: 0.7)
-                                                ],
-                                              )
-                                            : null,
-                                        color: isSelected
-                                            ? null
-                                            : Theme.of(context)
-                                                .colorScheme
-                                                .surface,
-                                        borderRadius:
-                                            BorderRadius.circular(14),
-                                        border: Border.all(
+                              if (_selectedProvider == null)
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                      vertical: 12),
+                                  child: Text(
+                                    'Select a network provider to see available bundles',
+                                    style: TextStyle(
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .onSurface
+                                          .withValues(alpha: 0.5),
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                )
+                              else
+                                Wrap(
+                                  spacing: 10,
+                                  runSpacing: 10,
+                                  children: bundles.map((bundle) {
+                                    final isSelected =
+                                        _selectedBundle == bundle;
+                                    return GestureDetector(
+                                      onTap: () => setState(
+                                          () => _selectedBundle = bundle),
+                                      child: AnimatedContainer(
+                                        duration:
+                                            const Duration(milliseconds: 200),
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 16, vertical: 10),
+                                        decoration: BoxDecoration(
+                                          gradient: isSelected
+                                              ? const LinearGradient(
+                                                  colors: [
+                                                    dataColor,
+                                                    Color(0xFF6D28D9),
+                                                  ],
+                                                )
+                                              : null,
                                           color: isSelected
-                                              ? Colors.transparent
+                                              ? null
                                               : Theme.of(context)
-                                                  .dividerColor
-                                                  .withValues(alpha: 0.3),
+                                                  .colorScheme
+                                                  .surface,
+                                          borderRadius:
+                                              BorderRadius.circular(12),
+                                          border: Border.all(
+                                            color: isSelected
+                                                ? Colors.transparent
+                                                : Theme.of(context)
+                                                    .dividerColor
+                                                    .withValues(alpha: 0.3),
+                                          ),
+                                        ),
+                                        child: Column(
+                                          mainAxisSize: MainAxisSize.min,
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              bundle.size,
+                                              style: TextStyle(
+                                                fontWeight: FontWeight.w800,
+                                                fontSize: 15,
+                                                color: isSelected
+                                                    ? Colors.white
+                                                    : dataColor,
+                                              ),
+                                            ),
+                                            Text(
+                                              bundle.price.formatCurrency,
+                                              style: TextStyle(
+                                                fontWeight: FontWeight.w600,
+                                                fontSize: 12,
+                                                color: isSelected
+                                                    ? Colors.white70
+                                                    : null,
+                                              ),
+                                            ),
+                                            Text(
+                                              bundle.validity,
+                                              style: TextStyle(
+                                                fontSize: 10,
+                                                color: isSelected
+                                                    ? Colors.white60
+                                                    : Theme.of(context)
+                                                        .colorScheme
+                                                        .onSurface
+                                                        .withValues(alpha: 0.5),
+                                              ),
+                                            ),
+                                          ],
                                         ),
                                       ),
-                                      child: Column(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.center,
-                                        children: [
-                                          Text(
-                                            b.size,
-                                            style: TextStyle(
-                                              fontWeight: FontWeight.w800,
-                                              fontSize: 16,
-                                              color: isSelected
-                                                  ? Colors.white
-                                                  : dataColor,
-                                            ),
-                                          ),
-                                          const SizedBox(height: 2),
-                                          Text(
-                                            b.price.formatCurrency,
-                                            style: TextStyle(
-                                              fontWeight: FontWeight.w600,
-                                              fontSize: 13,
-                                              color: isSelected
-                                                  ? Colors.white70
-                                                  : null,
-                                            ),
-                                          ),
-                                          const SizedBox(height: 2),
-                                          Text(
-                                            b.validity,
-                                            style: TextStyle(
-                                              fontSize: 10,
-                                              color: isSelected
-                                                  ? Colors.white60
-                                                  : Theme.of(context)
-                                                      .colorScheme
-                                                      .onSurface
-                                                      .withValues(alpha: 0.5),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  );
-                                },
-                              ),
+                                    );
+                                  }).toList(),
+                                ),
                             ],
                           ),
                         ),
@@ -435,13 +713,111 @@ class _DataScreenState extends State<DataScreen> {
                           isLoading: _loading,
                           icon: Icons.wifi_rounded,
                         ),
-        const SizedBox(height: 20),
+                        const SizedBox(height: 20),
                       ],
                     ),
                   ),
                 ),
               ),
-            );
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── PIN entry sheet ──────────────────────────────────────────────────────────
+// Extracted into its own StatefulWidget so Flutter properly disposes the
+// InputDecorator animation tickers when the sheet is dismissed, preventing
+// the "dirty widget outside build scope" assertion.
+class _PinSheet extends StatefulWidget {
+  const _PinSheet({required this.bundleSize, required this.phone});
+  final String bundleSize;
+  final String phone;
+
+  @override
+  State<_PinSheet> createState() => _PinSheetState();
+}
+
+class _PinSheetState extends State<_PinSheet> {
+  final _pinCtrl = TextEditingController();
+
+  @override
+  void dispose() {
+    _pinCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(24, 20, 24, 32),
+        decoration: BoxDecoration(
+          color: Theme.of(context).cardTheme.color,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey.withValues(alpha: 0.3),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+            const Text(
+              'Enter Transaction PIN',
+              style: TextStyle(fontWeight: FontWeight.w700, fontSize: 18),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'Confirm purchase of ${widget.bundleSize} data for ${widget.phone}',
+              style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
+            ),
+            const SizedBox(height: 20),
+            TextField(
+              controller: _pinCtrl,
+              obscureText: true,
+              keyboardType: TextInputType.number,
+              maxLength: 6,
+              autofocus: true,
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              decoration: InputDecoration(
+                labelText: 'Transaction PIN',
+                prefixIcon: const Icon(Icons.lock_rounded),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                counterText: '',
+              ),
+            ),
+            const SizedBox(height: 20),
+            GradientButton(
+              label: 'Confirm Purchase',
+              icon: Icons.check_rounded,
+              onPressed: () {
+                if (_pinCtrl.text.length < 4) return;
+                Navigator.pop(context, _pinCtrl.text);
+              },
+            ),
+            const SizedBox(height: 8),
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 
@@ -449,7 +825,15 @@ class _DataBundle {
   final String size;
   final int price;
   final String validity;
-  final String planId;
 
-  const _DataBundle(this.size, this.price, this.validity, this.planId);
+  const _DataBundle(this.size, this.price, this.validity);
+
+  @override
+  bool operator ==(Object other) =>
+      other is _DataBundle &&
+      size == other.size &&
+      validity == other.validity;
+
+  @override
+  int get hashCode => Object.hash(size, validity);
 }

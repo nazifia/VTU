@@ -237,12 +237,14 @@ class ApiService {
     required String provider,
     required String planId,
     required double amount,
+    required String transactionPin,
   }) async {
     final response = await _dio.post('/vtu/data/', data: {
       'phone': phone,
       'provider': provider,
       'plan_id': planId,
       'amount': amount,
+      'transaction_pin': transactionPin,
     });
     return response.data as Map<String, dynamic>;
   }

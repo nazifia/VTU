@@ -91,7 +91,6 @@ class LoginView(APIView):
 
         user = authenticate(request, username=phone, password=pin)
 
-
         if user is None:
             return Response(
                 {"detail": "Invalid phone number or PIN."},
@@ -100,6 +99,11 @@ class LoginView(APIView):
         if not user.is_active:
             return Response(
                 {"detail": "Account disabled."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        if not user.is_verified:
+            return Response(
+                {"detail": "Account not verified. Please complete OTP verification."},
                 status=status.HTTP_403_FORBIDDEN,
             )
         return Response(_get_tokens(user))

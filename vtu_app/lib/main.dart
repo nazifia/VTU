@@ -6,9 +6,9 @@ import 'providers/auth_provider.dart';
 import 'providers/theme_provider.dart';
 import 'providers/config_provider.dart';
 import 'services/api_service.dart';
-import 'services/mock_api_service.dart';
 import 'services/biometric_service.dart';
 import 'services/storage_service.dart';
+import 'screens/splash_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/app_shell.dart';
 import 'screens/register_screen.dart';
@@ -27,10 +27,7 @@ void main() async {
   // Initialize services
   final storage = StorageService();
   final biometric = BiometricService();
-  // Use MockApiService for fully offline testing (no backend required).
-  // Switch to: ApiService(storage, baseUrl: await storage.getServerUrl())
-  // when connecting to a real backend.
-  final ApiService api = MockApiService(storage);
+  final ApiService api = ApiService(storage, baseUrl: await storage.getServerUrl());
 
   // Initialize providers
   final themeProvider = ThemeProvider(storage);
@@ -59,6 +56,7 @@ class NpayApp extends StatefulWidget {
 }
 
 class _NpayAppState extends State<NpayApp> {
+  final _navigatorKey = GlobalKey<NavigatorState>();
   Timer? _authTimer;
   DateTime _lastInteraction = DateTime.now();
 
@@ -83,12 +81,12 @@ class _NpayAppState extends State<NpayApp> {
   }
 
   void _logoutUser() {
-    if (!mounted) return;
-    final auth = context.read<AuthProvider>();
-    if (auth.isAuthenticated) {
-      auth.logout();
-      Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
-    }
+    final nav = _navigatorKey.currentState;
+    if (nav == null) return;
+    final auth = _navigatorKey.currentContext?.read<AuthProvider>();
+    if (auth == null || !auth.isAuthenticated) return;
+    auth.logout();
+    nav.pushNamedAndRemoveUntil('/login', (route) => false);
   }
 
   @override
@@ -109,10 +107,11 @@ class _NpayAppState extends State<NpayApp> {
       child: MaterialApp(
         title: 'Npay',
         debugShowCheckedModeBanner: false,
+        navigatorKey: _navigatorKey,
         theme: AppTheme.lightTheme,
         darkTheme: AppTheme.darkTheme,
         themeMode: theme.isDark ? ThemeMode.dark : ThemeMode.light,
-        home: const _AuthGate(),
+        home: const SplashScreen(),
         routes: {
           '/login': (_) => const LoginScreen(),
           '/register': (_) => const RegisterScreen(),
@@ -131,98 +130,3 @@ class _NpayAppState extends State<NpayApp> {
   }
 }
 
-class _AuthGate extends StatefulWidget {
-  const _AuthGate();
-
-  @override
-  State<_AuthGate> createState() => _AuthGateState();
-}
-
-class _AuthGateState extends State<_AuthGate> {
-  bool _initialized = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _initialize();
-  }
-
-  Future<void> _initialize() async {
-    await context.read<AuthProvider>().init();
-    if (mounted) setState(() => _initialized = true);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    if (!_initialized) return _SplashScreen();
-
-    final auth = context.watch<AuthProvider>();
-
-    if (auth.isAuthenticated) return const AppShell();
-    return const LoginScreen();
-  }
-}
-
-class _SplashScreen extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    return Scaffold(
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: isDark ? AppTheme.darkBgGradient : AppTheme.lightBgGradient,
-        ),
-        child: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                width: 96,
-                height: 96,
-                decoration: BoxDecoration(
-                  gradient: AppTheme.primaryGradient,
-                  borderRadius: BorderRadius.circular(28),
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppTheme.primaryIndigo.withValues(alpha: 0.4),
-                      blurRadius: 32,
-                      offset: const Offset(0, 12),
-                    ),
-                  ],
-                ),
-                child: const Icon(
-                  Icons.account_balance_wallet_rounded,
-                  color: Colors.white,
-                  size: 48,
-                ),
-              ),
-              const SizedBox(height: 24),
-              Text(
-                'Npay',
-                style: Theme.of(context).textTheme.displayMedium?.copyWith(
-                      color: AppTheme.primaryIndigo,
-                      fontWeight: FontWeight.w800,
-                    ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Your Nigerian FinTech Wallet',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Theme.of(context)
-                          .colorScheme
-                          .onSurface
-                          .withValues(alpha: 0.6),
-                    ),
-              ),
-              const SizedBox(height: 48),
-              const CircularProgressIndicator(
-                color: AppTheme.primaryIndigo,
-                strokeWidth: 3,
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
